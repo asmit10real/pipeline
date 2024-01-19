@@ -62,6 +62,7 @@ def optimize_slope(support: bool, pivot:int , init_slope: float, y: np.array):
     # Optimize done, return best slope and intercept
     #logger.warning('Returning optimize_slope()')
     return (best_slope, -best_slope * pivot + y[pivot])
+
 def fit_trendlines_single(data: np.array):
     # find line of best fit (least squared) 
     # coefs[0] = slope,  coefs[1] = intercept 
@@ -77,6 +78,7 @@ def fit_trendlines_single(data: np.array):
     resist_coefs = optimize_slope(False, upper_pivot, coefs[0], data)
     #logger.warning('Returning fit_trendlines_single()')
     return (support_coefs, resist_coefs)
+
 def fit_trendlines_high_low(high: np.array, low: np.array, close: np.array):
     x = np.arange(len(close))
     coefs = np.polyfit(x, close, 1)
