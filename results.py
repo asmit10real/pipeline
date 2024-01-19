@@ -1,3 +1,16 @@
+import pandas as pd
+import logging
+import sqlite3
+import numpy as np
+import yfinance as yf
+import performance as perf
+import sql as sql
+import signals as signals
+#Plots
+import matplotlib.pyplot as plt
+logger = logging.getLogger()
+logger.setLevel(logging.CRITICAL) #Debug or Critical are used
+
 def processData(df: pd.DataFrame):
     logger.warning('Attempting to processData() df = df.copy()')
     df = df.copy()
@@ -8,13 +21,13 @@ def processData(df: pd.DataFrame):
     maxdrawstrat = df['drawmaxstrat'][-1]
     maxprofitstrat = df['cummaxstrat'][-1]
     logger.warning('Attempting to calculate basePerf() for buy and hold')
-    holdres = basePerf(df, 252)
+    holdres = perf.basePerf(df, 252)
     logger.warning('Attempting to calculate basePerf() for strategy')
-    stratres = basePerf(df, 252, strategy = True)
+    stratres = perf.basePerf(df, 252, strategy = True)
     return holdres, stratres
 
 #Pass raw data | lookback is an indicator variable. View is a strategy variable
-def processDataMultiple(stocks: list, dateFrom: "", dateTO: "", lookback: int, view: int, strat = 1, plotMe = True):
+def processDataMultiple(stocks: list, dateFrom: str, dateTO: str, lookback: int, view: int, strat = 1, plotMe = True):
     indx = 1
     d1 = dateFrom.replace('-', "")
     d2 = dateTO.replace('-', "")
@@ -22,12 +35,12 @@ def processDataMultiple(stocks: list, dateFrom: "", dateTO: "", lookback: int, v
     conn = sqlite3.connect('stock_data.db')
     connRaw = sqlite3.connect('raw_data.db')
     #Naive implementation
-    #getData(stock: str, start_date: str, end_date: str, conn) -> pd.DataFrame:
+    #sql.getData(stock: str, start_date: str, end_date: str, conn) -> pd.DataFrame:
     for stock in stocks:
         #logger.critical("Checking if data is already downloaded")
-        debug = dataExists(stock, dateFrom, dateTO, connRaw)
+        debug = sql.exists(stock, dateFrom, dateTO, connRaw)
         logger.critical(f'TRUE/FALSE EVALS TO: {debug}')
-        if(dataExists(stock, dateFrom, dateTO, connRaw) == False):
+        if(sql.exists(stock, dateFrom, dateTO, connRaw) == False):
             #Data isn't downloaded, downloading it
             #logger.critical("Data isn't downloaded, downloading it")
             data = yf.download(stock, dateFrom, dateTO)
@@ -41,7 +54,7 @@ def processDataMultiple(stocks: list, dateFrom: "", dateTO: "", lookback: int, v
             try:
                 #logger.critical("Attempting to write data")
                 #logger.critical(debug)
-                writeRaw(data, stock)
+                sql.writeRaw(data, stock)
             except:
                 logger.warning("Fuck")
     logger.warning("MOVING ON")
@@ -57,19 +70,19 @@ def processDataMultiple(stocks: list, dateFrom: "", dateTO: "", lookback: int, v
         logger.warning(f'Attempting to work on {stock}')
         #dl data
         logger.warning('Attempting to download data')
-        data = getData(stock, dateFrom, dateTO, connRaw)
+        data = sql.getData(stock, dateFrom, dateTO, connRaw)
         debug = data.columns
         logger.critical(debug)
-        data['VWAP'] = calcVWAP(data)
-        data['AVWAP'] = calcAVWAP(data, 2)
+        data['VWAP'] = signals.calcVWAP(data)
+        data['AVWAP'] = signals.calcAVWAP(data, 2)
         #logger.critical(data['VWAP'])
         #logger.critical(data['AVWAP'])
-        #logger.critical(f'DATA FROM GETDATA {data}')
+        #logger.critical(f'DATA FROM sql.getData {data}')
         #data.loc[:, 'Date'] = pd.to_datetime(data.loc[:, 'Date'])
         #data.set_index('Date', inplace=True)
         #logger.critical(data['Close'])
         #Input raw into db if not there
-        #writeRaw(data, sto)
+        #sql.writeRaw(data, sto)
         #End db code
         #setup
         logger.warning('Creating copy of data called data2 for real pricing performance calculations')
@@ -84,7 +97,7 @@ def processDataMultiple(stocks: list, dateFrom: "", dateTO: "", lookback: int, v
         resist_slope = [np.nan] * len(data)
         for i in range(lookback - 1, len(data)):
             candles = data.iloc[i - lookback + 1: i + 1]
-            support_coefs, resist_coefs =  fit_trendlines_high_low(candles['High'], 
+            support_coefs, resist_coefs =  signals.fit_trendlines_high_low(candles['High'], 
                                                                    candles['Low'], 
                                                                    candles['Close'])
             support_slope[i] = support_coefs[0]
@@ -107,13 +120,13 @@ def processDataMultiple(stocks: list, dateFrom: "", dateTO: "", lookback: int, v
         logger.warning('Attempting to align real and log datasets')
         #logger.critical(data)
         data2 = data2[(data2.index >= data.index[0])]
-        #Assign position based on signal(s) np.where(signal1 + signal2 = 2, 1, 0)
+        #Assign position based on signals.signal(s) np.where(signal1 + signal2 = 2, 1, 0)
         logger.warning('Attempting to set position based on data')
         #STRATEGY
         #CHANGE THIS TO CHANGE STRATEGY
-        #logger.critical(f'STUFF: {signal(data, strat)[1]}')
-        data2.loc[:,'position'] = signal(data, strat)[0]
-        data.loc[:,'position'] = signal(data, strat)[0]
+        #logger.critical(f'STUFF: {signals.signal(data, strat)[1]}')
+        data2.loc[:,'position'] = signals.signal(data, strat)[0]
+        data.loc[:,'position'] = signals.signal(data, strat)[0]
         #Calculate buy and hold returns for raw data and log data
         logger.warning('Attempting to set Buy and hold returns')
         data['Returnsb&h'] = data.loc[:,'Close'] - data.loc[:,'Close'].shift(1)
@@ -143,7 +156,7 @@ def processDataMultiple(stocks: list, dateFrom: "", dateTO: "", lookback: int, v
         data = data.dropna()
         #Moved to function
         logger.warning('Calling calcData on data2')
-        data2 = calcData(data2)
+        data2 = perf.calc(data2)
         #data2.head()
         logger.warning('Attempting to drop NaNs from data2')
         data2 = data2.dropna()
@@ -157,7 +170,7 @@ def processDataMultiple(stocks: list, dateFrom: "", dateTO: "", lookback: int, v
         bug = data.head()
         #logger.critical(f'data: {bug}')
         dz = {
-            "Num Positions" : [1, signal(data, strat)[1]],
+            "Num Positions" : [1, signals.signal(data, strat)[1]],
             "PnL" : [(1 + data2['cumreturns'][-1] / 100), (1 + data2.loc[:,'cumreturnsstrat'][-1] / 100)]
         }
         #logger.critical(f'DZ DZ:{dz}')

@@ -109,7 +109,7 @@ def writeRaw(data: pd.DataFrame, stock: str):
         conn.close()
 
 #Only use inside another sql function or close connection after
-def dataExists(stock: str, start: str, end: str, conn) -> bool:
+def exists(stock: str, start: str, end: str, conn) -> bool:
     """
     Checks if there is at least one entry for each year in the range for a given stock.
     Args:
