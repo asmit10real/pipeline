@@ -137,19 +137,6 @@ def fit_trendlines_high_low(high: np.array, low: np.array, close: np.array):
     #logger.warning('Returning fit_trendlines_high_low()')
     return (support_coefs, resist_coefs)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 #We calculate and return number of positions in this function because it
 #saves time having to loop elsewhere in the code.
 #Calculate the signal based on the various conditions below
