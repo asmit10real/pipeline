@@ -7,6 +7,8 @@ import performance as perf
 import sql as sql
 import signals as signals
 #Plots
+import matplotlib
+matplotlib.use('Qt5Agg')  # or 'TkAgg', 'GTK3Agg', etc.
 import matplotlib.pyplot as plt
 logger = logging.getLogger()
 logger.setLevel(logging.CRITICAL) #Debug or Critical are used
