@@ -4,7 +4,7 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.CRITICAL) #Debug or Critical are used
 
-def calcData(df: pd.DataFrame):
+def calc(df: pd.DataFrame):
     threshold_date = df.index[0] + pd.Timedelta(days=14)
     df['cummax'] = df.loc[:,'cumreturns'].cummax()
     df['cummaxstrat'] = df.loc[:,'cumreturnsstrat'].cummax()
@@ -16,7 +16,7 @@ def calcData(df: pd.DataFrame):
     df = df.dropna()
     return df
 
-def printData(df: pd.DataFrame):
+def output(df: pd.DataFrame):
     df = df.copy()
     maxdraw = df['drawmax'][-1]
     maxprofit = df['cummax'][-1]
