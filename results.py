@@ -83,6 +83,8 @@ def average(tableName: str):
 
 #Pass raw data | lookback is an indicator variable. View is a strategy variable
 def processDataMultiple(stocks: list, dateFrom: str, dateTO: str, lookback: int, view: int, strat = 1, plotMe = True):
+    initial_balance = 100  # Example initial balance
+    position_size_percent = 0.9  # 10% of balance per trade
     indx = 1
     d1 = dateFrom.replace('-', "")
     d2 = dateTO.replace('-', "")
@@ -171,10 +173,23 @@ def processDataMultiple(stocks: list, dateFrom: str, dateTO: str, lookback: int,
         data2['cumreturnsstrat'] = ((1 + data2.loc[:,'Strategy']).cumprod() - 1) * 100
         data['cumreturns'] = ((1 + data.loc[:,'Returnsb&h']).cumprod() - 1) * 100
         data['cumreturnsstrat'] = ((1 + data.loc[:,'Strategy']).cumprod() - 1) * 100
-        #Equity Curve
-        data2['equitycurve'] = 100 * (1 + data2.loc[:,'cumreturnsstrat'] / 100)
-        data['equitycurve'] = 100 * (1 + data.loc[:,'cumreturnsstrat'] / 100)
+
+
+        # Initialize account balance for each stock
+        account_balance = initial_balance
+        data2['equitycurve'] = account_balance
+
+        for index, row in data2.iterrows():
+            position_size = account_balance * position_size_percent
+            trade_return = row['Strategy']
+            trade_result = position_size * trade_return  # Assuming trade_return is in decimal form
+            account_balance += trade_result
+            data2.at[index, 'equitycurve'] = account_balance
+        
         data2['peakcurve'] = data2['equitycurve'].cummax()
+
+        #Equity Curve
+        data['equitycurve'] = 100 * (1 + data.loc[:,'cumreturnsstrat'] / 100)
         data['peakcurve'] = data['equitycurve'].cummax()
         logger.warning('Attempting to drop NaNs')
         data2 = data2.dropna()
