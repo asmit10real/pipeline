@@ -42,7 +42,7 @@ def getTables(db='stock_data.db'):
         # Close the database connection
         conn.close()
 
-def getDataFromTable(tableName: str, db='stock_data.db'):
+def getDataFromTable(tableName: str, db='stock_data.db') -> pd.DataFrame:
     #\"strat_{strat}_view_{view}_lookback_{lookback}_from_{dateFrom}_to_{dateTO}_stocks_{stringPlaceHolder}"
     #STRAT: 2 VIEW: 1 LOOKBACK: 30 From: 2020-01-01 To: 2024-01-01 Stocks: ['QQQ', 'SPY', 'WMT']
     try:
@@ -57,6 +57,8 @@ def getDataFromTable(tableName: str, db='stock_data.db'):
     finally:
         # Close the connection
         conn.close()
+        print("returning df")
+        return df
 
 def writeRaw(data: pd.DataFrame, stock: str):
     #set symbol column

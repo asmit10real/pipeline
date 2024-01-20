@@ -216,7 +216,7 @@ def signal(data: pd.DataFrame, strategy = 1):
             #If the signal is active and the resistance slope has yet to make new lows in the 
             #rolling window, stay long
             x = ((data['resist_slope'][i] + data['support_slope'][i]) / 2)
-            if(data['Close'][i] > data['AVWAP'][i] and x > 0):
+            if(data['Close'][i] > data['AVWAP'][i] and x < 0):
                 signal[i] = 1
                 curr_sig = 1
                 if(last_sig == 0):

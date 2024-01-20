@@ -10,12 +10,12 @@ logger.warning('PROGRAM START')
 testPerf = False #Test run time performance?
 lookback = 30 #indicator variable
 view = 30 #Strategy variable | Changes rolling window size
-strat = 2 #Select which strategy you want to use
+strat = 3 #Select which strategy you want to use
 d1 = "2023-01-01" #From:
 #Must be either same year as FROM OR a few days into new year or else SQL dataExists() WILL fail
 d2 = "2024-01-05" #TO:
 #15 DOWNTREND 15 UPTREND 20 WHATEVER FOR 2023-01-01 -> 2024-01-05
-"""
+
 stocks = [
     "AAPL", "MSFT", "AMZN", "NVDA", "AVGO", 
     "META", "GOOG", "COST", "ADBE", "AMD",
@@ -28,7 +28,7 @@ stocks = [
     "NOV", "NE", "RIG", "CHX", "PTEN",
     "PLTR", "PTON", "OII", "RIOT", "TSLA"
 ]
-"""
+
 '''
 stocks = [
     "AAPL", "MSFT", "AMZN", "TSLA", "GOOGL", 
@@ -45,7 +45,7 @@ stocks = [
 '''
 #stocks = ["AAPL", "AMZN", "ASML", "BHP", "GLEN.L", "GOOG", "META", "MSFT", "NVDA", "QCOM", "RIO", "SHECF", "SUOPY", "TSM"]
 #stocks = ["BA", "CHPT", "DIS", "MARA", "NIO", "PFE", "SEDG", "SHOP", "SNOW", "XOM"] #ALPHABETICAL
-stocks = ["RIO"]
+#stocks = ["RIO", "SPY"]
 logger.warning('Attempting to call processDataMultiple(stocks, date1, date2, lookback, view)')
 print(f'STRAT: {strat} VIEW: {view} LOOKBACK: {lookback} From: {d1} To: {d2} Stocks: {stocks}')
 
@@ -55,7 +55,7 @@ if(testPerf):
     p.strip_dirs()
     p.sort_stats('time').print_stats(25)
 else:
-    results.processDataMultiple(stocks, d1, d2, lookback, view, strat = strat, plotMe = True)
+    results.processDataMultiple(stocks, d1, d2, lookback, view, strat = strat, plotMe = False)
 
 #Match formatting to sql formatting
 d1 = d1.replace('-', "")
@@ -63,4 +63,28 @@ d2 = d2.replace('-', "")
 stringName = "".join(stocks).replace(".", "")
 tableName = f"strat_{strat}_view_{view}_lookback_{lookback}_from_{d1}_to_{d2}_stocks_{stringName}"
 sql.getTables(db="stock_data.db")
-sql.getDataFromTable(tableName, db = "stock_data.db") #output data
+x = sql.getDataFromTable(tableName, db = "stock_data.db") #output data
+z = 0
+odds = []
+evens = []
+for profit in x.loc[:, "Profit Factor"]:
+    if(z > 0):
+        if(z % 2 > 0):
+            odds.append(profit)
+        else:
+            evens.append(profit)
+    if(z == 0):
+        evens.append(profit)
+    print(profit)
+    z += 1
+z = 0
+for x in odds:
+    z += x - 1
+print(z / 24)
+z = 0
+for x in evens:
+    z += x - 1
+print(z / 24)
+#out = x.loc[:, "Profit Factor"].mean()
+#out2 = x.loc[:, "PnL"].mean()
+#print(out, out2)
