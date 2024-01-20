@@ -11,7 +11,7 @@ testPerf = False #Test run time performance?
 lookback = 30 #indicator variable
 view = 30 #Strategy variable | Changes rolling window size
 strat = 3 #Select which strategy you want to use
-d1 = "2023-01-01" #From:
+d1 = "2019-01-01" #From:
 #Must be either same year as FROM OR a few days into new year or else SQL dataExists() WILL fail
 d2 = "2024-01-05" #TO:
 #15 DOWNTREND 15 UPTREND 20 WHATEVER FOR 2023-01-01 -> 2024-01-05
@@ -45,7 +45,7 @@ stocks = [
 '''
 #stocks = ["AAPL", "AMZN", "ASML", "BHP", "GLEN.L", "GOOG", "META", "MSFT", "NVDA", "QCOM", "RIO", "SHECF", "SUOPY", "TSM"]
 #stocks = ["BA", "CHPT", "DIS", "MARA", "NIO", "PFE", "SEDG", "SHOP", "SNOW", "XOM"] #ALPHABETICAL
-#stocks = ["RIO", "SPY"]
+#stocks = ["RIO", "SPY", "NVDA"]
 logger.warning('Attempting to call processDataMultiple(stocks, date1, date2, lookback, view)')
 print(f'STRAT: {strat} VIEW: {view} LOOKBACK: {lookback} From: {d1} To: {d2} Stocks: {stocks}')
 
@@ -64,33 +64,50 @@ stringName = "".join(stocks).replace(".", "")
 tableName = f"strat_{strat}_view_{view}_lookback_{lookback}_from_{d1}_to_{d2}_stocks_{stringName}"
 sql.getTables(db="stock_data.db")
 
-sql.getDataFromTable(tableName, db = "stock_data.db") #output data
+#sql.getDataFromTable(tableName, db = "stock_data.db") #output data
 
-"""
+
 x = sql.getDataFromTable(tableName, db = "stock_data.db") #output data
 z = 0
+even = True
 odds = []
 evens = []
 for profit in x.loc[:, "Profit Factor"]:
-    if(z > 0):
-        if(z % 2 > 0):
-            odds.append(profit)
-        else:
-            evens.append(profit)
-    if(z == 0):
+    if(even == True):
         evens.append(profit)
-    print(profit)
-    z += 1
+        even = False
+    else:
+        odds.append(profit)
+        even = True
 z = 0
-for x in odds:
-    z += x - 1
-print(z / 24)
+for n in evens:
+    z += n
+print(f"B&H average profit factor {z / len(evens)}")
 z = 0
-for x in evens:
-    z += x - 1
-print(z / 24)
+for n in odds:
+    z += n
+print(f"STRATEGY AVERAGE PROFIT FACTOR {z / len(odds)}")
 
-"""
+evens = True
+evens = []
+odds = []
+for PnL in x.loc[:, "PnL"]:
+    if(even == True):
+        evens.append(PnL)
+        even = False
+    else:
+        odds.append(PnL)
+        even = True
+z = 0
+for n in evens:
+    z += n
+print(f"B&h average PnL {z / len(evens)}")
+z = 0
+for n in odds:
+    z += n
+print(f"STRATEGY average PnL {z / len(odds)}")
+
+
 #out = x.loc[:, "Profit Factor"].mean()
 #out2 = x.loc[:, "PnL"].mean()
 #print(out, out2)

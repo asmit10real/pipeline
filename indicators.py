@@ -139,8 +139,6 @@ def fit_trendlines_high_low(high: np.array, low: np.array, close: np.array):
     return (support_coefs, resist_coefs)
 
 def getTrend(data: pd.DataFrame, data2: pd.DataFrame, lookback: int, view: int):
-        #Save copy of data for real pricing for performance calcs
-        data2 = data.copy()
         # Take natural log of data to resolve price scaling issues for indicator
         data = np.log(data)
         #Do everything
@@ -173,4 +171,6 @@ def getTrend(data: pd.DataFrame, data2: pd.DataFrame, lookback: int, view: int):
         logger.warning('Attempting to align real and log datasets')
         #logger.critical(data)
         data2 = data2[(data2.index >= data.index[0])]
+        data = data.dropna()
+        data2 = data2.dropna()
         return data, data2
