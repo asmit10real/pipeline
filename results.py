@@ -29,6 +29,58 @@ def processData(df: pd.DataFrame):
     stratres = perf.basePerf(df, 252, strategy = True)
     return holdres, stratres
 
+def average(tableName: str):
+    x = sql.getDataFromTable(tableName, db = "stock_data.db") #output data
+    z = 0
+    even = True
+    odds = []
+    evens = []
+    bh1 = 0
+    bh2 = 0
+    strat1 = 0
+    strat2 = 0
+    bhres = ()
+    stratres = ()
+    for profit in x.loc[:, "Profit Factor"]:
+        if(even == True):
+            evens.append(profit)
+            even = False
+        else:
+            odds.append(profit)
+            even = True
+    z = 0
+    for n in evens:
+        z += n
+    bh1 = z / len(evens)
+    z = 0
+    for n in odds:
+        z += n
+    strat1 = z / len(odds)
+
+    evens = True
+    evens = []
+    odds = []
+    for PnL in x.loc[:, "PnL"]:
+        if(even == True):
+            evens.append(PnL)
+            even = False
+        else:
+            odds.append(PnL)
+            even = True
+    z = 0
+    for n in evens:
+        z += n
+    bh2 = z / len(evens)
+    z = 0
+    for n in odds:
+        z += n
+    strat2 = z / len(odds)
+
+    bhres = (bh1, bh2)
+    stratres = (strat1, strat2)
+
+    return bhres, stratres
+
 #Pass raw data | lookback is an indicator variable. View is a strategy variable
 def processDataMultiple(stocks: list, dateFrom: str, dateTO: str, lookback: int, view: int, strat = 1, plotMe = True):
     indx = 1

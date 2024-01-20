@@ -64,48 +64,15 @@ stringName = "".join(stocks).replace(".", "")
 tableName = f"strat_{strat}_view_{view}_lookback_{lookback}_from_{d1}_to_{d2}_stocks_{stringName}"
 sql.getTables(db="stock_data.db")
 
+bh, strat = results.average(tableName)
+print(f"B&Hold Average Profit Factor: {bh[0]} Average PnL: {bh[1]}")
+print(f"Strat Average Profit Factor: {strat[0]} Average PnL: {strat[1]}")
+
+
 #sql.getDataFromTable(tableName, db = "stock_data.db") #output data
 
 
-x = sql.getDataFromTable(tableName, db = "stock_data.db") #output data
-z = 0
-even = True
-odds = []
-evens = []
-for profit in x.loc[:, "Profit Factor"]:
-    if(even == True):
-        evens.append(profit)
-        even = False
-    else:
-        odds.append(profit)
-        even = True
-z = 0
-for n in evens:
-    z += n
-print(f"B&H average profit factor {z / len(evens)}")
-z = 0
-for n in odds:
-    z += n
-print(f"STRATEGY AVERAGE PROFIT FACTOR {z / len(odds)}")
 
-evens = True
-evens = []
-odds = []
-for PnL in x.loc[:, "PnL"]:
-    if(even == True):
-        evens.append(PnL)
-        even = False
-    else:
-        odds.append(PnL)
-        even = True
-z = 0
-for n in evens:
-    z += n
-print(f"B&h average PnL {z / len(evens)}")
-z = 0
-for n in odds:
-    z += n
-print(f"STRATEGY average PnL {z / len(odds)}")
 
 
 #out = x.loc[:, "Profit Factor"].mean()
