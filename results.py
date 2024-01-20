@@ -6,6 +6,7 @@ import yfinance as yf
 import performance as perf
 import sql as sql
 import signals as signals
+import indicators as indicators
 #Plots
 import matplotlib
 matplotlib.use('Qt5Agg')  # or 'TkAgg', 'GTK3Agg', etc.
@@ -92,36 +93,8 @@ def processDataMultiple(stocks: list, dateFrom: str, dateTO: str, lookback: int,
         data2 = data.copy()
         # Take natural log of data to resolve price scaling issues for indicator
         data = np.log(data)
-        #Do everything
-        logger.warning('Attempting to begin calculating indicator')
-        #Calculate indicator
-        support_slope = [np.nan] * len(data)
-        resist_slope = [np.nan] * len(data)
-        for i in range(lookback - 1, len(data)):
-            candles = data.iloc[i - lookback + 1: i + 1]
-            support_coefs, resist_coefs =  signals.fit_trendlines_high_low(candles['High'], 
-                                                                   candles['Low'], 
-                                                                   candles['Close'])
-            support_slope[i] = support_coefs[0]
-            resist_slope[i] = resist_coefs[0]
-        
-        logger.warning('Attempting to assign indicator values to columnds in data')
-        data['support_slope'] = support_slope
-        data['resist_slope'] = resist_slope
-        v = view * 2
-        data['slopeqnt'] = ((data['support_slope'].shift(1) + data['resist_slope'].shift(1)) / 2).rolling(v, min_periods = v).quantile(0.2, interpolation = 'lower')
-        #Get results
-        data = data.dropna()
-        #Get lows and highs of slope in past 30 days excluding today
-        data['slopelows'] = data['support_slope'].shift(1).rolling(view, min_periods = view).min()
-        data['slopelowr'] = data['resist_slope'].shift(1).rolling(view, min_periods = view).min()
-        data['slopehighs'] = data['support_slope'].shift(1).rolling(view, min_periods = view).max()
-        data['slopehighr'] = data['resist_slope'].shift(1).rolling(view, min_periods = view).max()
-        data = data.dropna()
-        #Align datasets
-        logger.warning('Attempting to align real and log datasets')
-        #logger.critical(data)
-        data2 = data2[(data2.index >= data.index[0])]
+
+        data, data2 = indicators.getTrend(data, data2, lookback, view)
         #Assign position based on signals.signal(s) np.where(signal1 + signal2 = 2, 1, 0)
         logger.warning('Attempting to set position based on data')
         #STRATEGY

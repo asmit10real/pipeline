@@ -63,6 +63,10 @@ d2 = d2.replace('-', "")
 stringName = "".join(stocks).replace(".", "")
 tableName = f"strat_{strat}_view_{view}_lookback_{lookback}_from_{d1}_to_{d2}_stocks_{stringName}"
 sql.getTables(db="stock_data.db")
+
+sql.getDataFromTable(tableName, db = "stock_data.db") #output data
+
+"""
 x = sql.getDataFromTable(tableName, db = "stock_data.db") #output data
 z = 0
 odds = []
@@ -85,6 +89,8 @@ z = 0
 for x in evens:
     z += x - 1
 print(z / 24)
+
+"""
 #out = x.loc[:, "Profit Factor"].mean()
 #out2 = x.loc[:, "PnL"].mean()
 #print(out, out2)
