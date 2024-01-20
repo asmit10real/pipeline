@@ -14,8 +14,8 @@ view = 30 #Strategy variable | Changes rolling window size
 strat = 3 #Select which strategy you want to use
 d1 = "2022-01-01" #From:
 d2 = "2024-01-05" #TO: #Must be either same year as FROM OR a few days into new year or else SQL dataExists() WILL fail
-stocks = ["BA", "CHPT", "DIS", "MARA", "NIO", "PFE", "SEDG", "SHOP", "SNOW", "XOM"] #ALPHABETICAL
-#stocks = ["RIO", "SPY", "NVDA"]
+
+stocks = ["BA", "CHPT", "DIS", "MARA", "NIO", "PFE", "SEDG", "SHOP", "SNOW", "XOM"] #ALPHABETICAL #stocks = ["RIO", "SPY", "NVDA"]
 
 if(testPerf):
     cProfile.run('results.processDataMultiple(stocks, d1, d2, lookback, view, strat = strat, plotMe = False)', 'profile_stats')
