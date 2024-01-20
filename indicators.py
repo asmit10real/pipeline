@@ -140,6 +140,7 @@ def fit_trendlines_high_low(high: np.array, low: np.array, close: np.array):
 
 def getTrend(data: pd.DataFrame, data2: pd.DataFrame, lookback: int, view: int):
         # Take natural log of data to resolve price scaling issues for indicator
+        data = data.dropna()
         data = np.log(data)
         #Do everything
         logger.warning('Attempting to begin calculating indicator')
