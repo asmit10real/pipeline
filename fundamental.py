@@ -1,4 +1,4 @@
-import pandas as pd
+
 '''
 CREATE SQL TABLE OF ALL THIS CRAB FOR database
 financial_metrics = [
@@ -105,8 +105,25 @@ msft.income_stmt
 msft.balance_sheet
 msft.cashflow
 '''
+
+#Probably should use AlphaVantage free plan is 25 calls/day, $25/month = 30 calls per minute
+
 import yfinance as yf
-msft = yf.Ticker("MSFT")
+import pandas as pd
+
+def get(stock: str):
+    # Call alphavantage api for balance sheet, cash flow, and income_statement for stock
+    # Set each of the csvs to dataframes
+    #balance_sheet = balance_sheet_csv.to_Frame()
+    #income_statement = income_statement.to_Frame()
+    #cashflow_statement = cashflow_statement.to_Frame()
+    #return (balance_sheet, income_statement, cashflow_statement)
+    return 0
+# qqq = get("QQQ")
+#calc(*qqq)
+def calc(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cashflow_statement: pd.DataFrame):
+    Calculations.shares(balance_sheet)
 #print(msft.balance_sheet.iloc[0]) #shares
-with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-    print(msft.cashflow)
+class Calculations:
+    def shares(balance_sheet: pd.DataFrame):
+        outstandingshares = balance_sheet[1]
