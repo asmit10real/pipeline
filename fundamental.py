@@ -1,22 +1,23 @@
+import pandas as pd
 '''
 CREATE SQL TABLE OF ALL THIS CRAB FOR database
 financial_metrics = [
     "period End", DATE might have to reformat
-    "Outstand Sh",
-    "Revenues",
+    "Outstand Sh", bal_sheet[1]
+    "Revenues", income_stmt[45]
     "Revs Avg3", average of current and previous two revs (total of 3) minimum window = 1
-    "Turnover Avg3", probably should add column for turnover without average but Turnover = $net revenue / $total assets | average of current and previous two turnovers (total of 3) minimum window = 1
-    "Gross Inc / TO", If Turnover>1 Gross profit / Turnover if Turnover<1 Gross profit * Turnover
-    "cfEBIT adj / TO", CFEBITDA = Cash Flow + Taxes + Interest Expense + Depreciation & Amortization / Turnover
+    "Turnover Avg3", probably should add column for turnover without average but Turnover = $net revenue income_stmt[45] - income_stmt[44]/ $total assets bal_sheet[40] | average of current and previous two turnovers (total of 3) minimum window = 1
+    "Gross Inc / TO", If Turnover>1 Gross profit [43] / Turnover if Turnover<1 Gross profit * Turnover
+    "cfEBIT adj / TO", CFEBITDA = Cash Flow cash_flow[0]+ Taxes cash_flow[46] + Interest Expense income_stmt[11]+ Depreciation & Amortization cash_flow[49] / Turnover
     "ROIC Avg3", ROIC = NOPAT / Invested Capital | NOPAT=Net operating profit after tax || average of current and previous two ROIC (total of 3) minimum window = 1
     "CROSIC Abg3", #UNKNOWN I really dont remember man
-    "Revs /sh", Revenues divided by shares 
-    "Assets",
-    "Assets /sh", Assets divided by shares
-    "Net Excess Cash", Excess Cash = Cash & Equivalents + Long-Term Investments - Current Liabilities
-    "Net Common Overhang", Net Common Overhang = LT liabilities + ST debt - Excess Cash & ST Investments
-    "Book /sh", Book Value per Share = (total assets minus its total liabilities) / Outstanding shares
-    "Tang Book /sh", equal to total assets - total liabilities - Intangibles / Outstanding shares
+    "Revs /sh", Revenues divided by shares income_stmt[45] / bal_sheet[1]
+    "Assets", bal_sheet[40]
+    "Assets /sh", Assets divided by shares bal_sheet[40] / bal_sheet[1]
+    "Net Excess Cash", Excess Cash = Cash & Equivalents bal_sheet[70] + Long-Term Investments bal_sheet[44] - Current Liabilities bal_sheet[28]
+    "Net Common Overhang", Net Common Overhang = LT liabilities bal_sheet[19] + ST debt bal_sheet[32] - Excess Cash & ST Investments bal_sheet[69]
+    "Book /sh", Book Value per Share = (total assets bal_sheet[40] - its total liabilities bal_sheet[18]) / Outstanding shares bal_sheet[1]
+    "Tang Book /sh", equal to total assets bal_sheet[40] - total liabilities bal_sheet[18] - Intangibles bal_sheet[46]  / Outstanding shares bal_sheet[1]
     "ROE", = Net Profit * Turnover * Financial Leverage
     "bm roe", = roe * book to market
     "bm ROE 3yr%", average of current and previous two bm roe (total of 3) minimum window = 1
@@ -87,3 +88,14 @@ financial_metrics = [
     ]
 
 '''
+'''
+
+msft.income_stmt
+msft.balance_sheet
+msft.cashflow
+'''
+import yfinance as yf
+msft = yf.Ticker("MSFT")
+#print(msft.balance_sheet.iloc[0]) #shares
+with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+    print(msft.cashflow)
