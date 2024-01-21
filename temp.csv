@@ -1,0 +1,32 @@
+#15 DOWNTREND 15 UPTREND 20 WHATEVER FOR 2023-01-01 -> 2024-01-05
+'''
+stocks = [
+    "AAPL", "MSFT", "AMZN", "NVDA", "AVGO", 
+    "META", "GOOG", "COST", "ADBE", "AMD",
+    "NFLX", "INTC", "INTU", "AMAT", "BKNG",
+    "NTR", "CTVA", "ADM", "TSN",
+    "FSLR", "ENPH", "SEDG", "DQ", "JKS",
+    "LUV", "AAL", "UAL", "ALGT", "ALK",
+    "VRTX", "GILD", "IQV", "BIIB", "MRNA",
+    "ALNY", "SLB", "HAL", "BKR", "TS",
+    "NOV", "NE", "RIG", "CHX", "PTEN",
+    "PLTR", "PTON", "OII", "RIOT", "TSLA"
+]
+'''
+'''
+stocks = [
+    "AAPL", "MSFT", "AMZN", "TSLA", "GOOGL", 
+    "GOOG", "ZIM", "JNJ", "JPM", "V", 
+    "NVDA", "UNH", "META", "PG", "HD", 
+    "XOM", "BAC", "MA", "PFE", "DIS", 
+    "LLY", "ADBE", "CVX", "COST", "TMO", 
+    "PEP", "VZ", "ABBV", "NKE", "CMCSA", 
+    "KO", "AVGO", "CSCO", "ACN", "WMT", 
+    "MRK", "ABT", "DHR", "NEE", "TXN", 
+    "QCOM", "ORCL", "UPS", "LIN", "MCD", 
+    "MS", "UNP", "HON", "BMY", "AMD"
+]
+'''
+#stocks = ["AAPL", "AMZN", "ASML", "BHP", "GLEN.L", "GOOG", "META", "MSFT", "NVDA", "QCOM", "RIO", "SHECF", "SUOPY", "TSM"]
+
+#print(f'STRAT: {strat} VIEW: {view} LOOKBACK: {lookback} From: {d1} To: {d2} Stocks: {stocks}')

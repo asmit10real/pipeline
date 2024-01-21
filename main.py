@@ -12,7 +12,7 @@ testPerf = False #Test run time performance?
 lookback = 30 #indicator variable
 view = 30 #Strategy variable | Changes rolling window size
 strat = 3 #Select which strategy you want to use
-d1 = "2020-01-01" #From:
+d1 = "2023-01-01" #From:
 d2 = "2024-01-05" #TO: #Must be either same year as FROM OR a few days into new year or else SQL dataExists() WILL fail
 
 #stocks = ["BA", "CHPT", "DIS", "MARA", "NIO", "PFE", "SEDG", "SHOP", "SNOW", "XOM"] #ALPHABETICAL #stocks = ["RIO", "SPY", "NVDA"]
