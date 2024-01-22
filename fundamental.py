@@ -110,15 +110,48 @@ msft.cashflow
 
 import yfinance as yf
 import pandas as pd
+import requests
+import numpy as np
+from pandas import json_normalize
+from dotenv import load_dotenv
+import os
 
-def get(stock: str):
+load_dotenv()  # This loads the variables from .env into the environment
+apikey = os.environ.get('API_KEY')
+
+'''
+# replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
+# url = f'https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol=IBM&apikey={apikey}'
+r = requests.get(url)
+dictr = r.json()
+reports = dictr['annualReports']
+
+df = json_normalize(reports)
+'''
+
+def getStatements(stock: str):
     # Call alphavantage api for balance sheet, cash flow, and income_statement for stock
+    url = f'https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol={stock}&apikey={apikey}' #Have to change this for each thing
+    r = requests.get(url)
+    dictr = r.json()
+    reports = dictr['annualReports']
+    balance_sheet = json_normalize(reports)
+    url = f'https://www.alphavantage.co/query?function=INCOME_STATEMENT&symbol={stock}&apikey={apikey}' #Have to change this for each thing
+    r = requests.get(url)
+    dictr = r.json()
+    reports = dictr['annualReports']
+    income_statement = json_normalize(reports)
+    url = f'https://www.alphavantage.co/query?function=CASH_FLOW&symbol={stock}&apikey={apikey}' #Have to change this for each thing
+    r = requests.get(url)
+    dictr = r.json()
+    reports = dictr['annualReports']
+    cashflow_statement = json_normalize(reports)
+
+
     # Set each of the csvs to dataframes
-    #balance_sheet = balance_sheet_csv.to_Frame()
     #income_statement = income_statement.to_Frame()
     #cashflow_statement = cashflow_statement.to_Frame()
-    #return (balance_sheet, income_statement, cashflow_statement)
-    return 0
+    return (balance_sheet, income_statement, cashflow_statement)
 # qqq = get("QQQ")
 #calc(*qqq)
 def calc(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cashflow_statement: pd.DataFrame):
@@ -126,4 +159,25 @@ def calc(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cashflow_s
 #print(msft.balance_sheet.iloc[0]) #shares
 class Calculations:
     def shares(balance_sheet: pd.DataFrame):
-        outstandingshares = balance_sheet[1]
+        outstandingshares = balance_sheet.loc[:, 'commonStockSharesOutstanding']
+        return outstandingshares
+    def revenueTotal(income_statement: pd.DataFrame):
+        income = income_statement.loc[:, 'totalRevenue']
+        return income
+    def revenueTotalAverage3(income_statement: pd.DataFrame):
+        revenueAverage = income_statement['totalRevenue'].rolling(window = 3, min_periods = 1).mean()
+        return revenueAverage
+    #turnover defined not using averages for now need to double check how it's supposed to be calculated
+    def turnover(income_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
+        turnover = income_statement['totalRevenue'] / balance_sheet['totalAssets']
+        return turnover
+    def turnoverAverage3(df: pd.DataFrame):
+        turnoverAvg = df['turnover'].rolling(window = 3, min_periods=1).mean()
+        return turnoverAvg
+    def grossIncDivTurnover(income_statement: pd.DataFrame, df: pd.DataFrame):
+        grossIncDivTurn = np.where(df['turnover'] > 1, 
+                   income_statement['grossProfit'] / df['turnover'], 
+                   income_statement['grossProfit'] * df['turnover'])
+        return grossIncDivTurn
+    def cfEbitDivTurnover(income_statement: pd.DataFrame, cashflow_statement: pd.DataFrame, df: pd.DataFrame):
+        ans = (cashflow_statement['operatingCashflow'] + income_statement['incomeTaxExpense'] + income_statement['interestExpense'] + cashflow_statement['depreciationDepletionAndAmortization']) / df['Turnover']
