@@ -219,7 +219,7 @@ class Calculations:
         return df['ebitdaPerShare'].rolling(window = 3, min_periods= 1).mean()
     def ebitdaPerShareAverage7(df: pd.DataFrame):
         return df['ebitdaPerShare'].rolling(window = 7, min_periods = 1).mean()
-    #Should be subtrating income from minority interest, haven't implemented it
+    #Should be subtrating minority interest from netIncomeFromCont..., haven't implemented it
     def commonEarningsPerShare(income_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
         return income_statement['netIncomeFromContinuingOperations'] / balance_sheet['commonStockSharesOutstanding']
     def commonEarningsPerShareAverage3(df: pd.DataFrame):
@@ -241,4 +241,8 @@ class Calculations:
     def netProfitMargin(income_statement: pd.DataFrame):
         return income_statement['netIncome'] / income_statement['totalRevenue']
     def bookValue(balance_sheet: pd.DataFrame):
-        return (balance_sheet['totalAssets'] - balance_sheet['totalLiabilities'] - balance_sheet['intangibleAssets'])
+        return (balance_sheet['totalAssets'] - balance_sheet['totalLiabilities'])
+    def tangibleBookValue(balance_sheet: pd.DataFrame, df: pd.DataFrame):
+        return df['bookValue'] - balance_sheet['intangibleAssets']
+    #need to implement book to market and tangible book to market, but that requires implementing getting a rough est of the market price of the
+    #stock at the time
