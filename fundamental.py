@@ -112,6 +112,7 @@ import yfinance as yf
 import pandas as pd
 import requests
 import numpy as np
+from datetime import datetime, timedelta
 from pandas import json_normalize
 from dotenv import load_dotenv
 import os
@@ -244,5 +245,46 @@ class Calculations:
         return (balance_sheet['totalAssets'] - balance_sheet['totalLiabilities'])
     def tangibleBookValue(balance_sheet: pd.DataFrame, df: pd.DataFrame):
         return df['bookValue'] - balance_sheet['intangibleAssets']
+    def marketValueForSpecificFilingDate(balance_sheet: pd.DataFrame, ticker: str, filing_date: str):
+        #idk if any of this is necessarily the best implementation or necessary but let's work from it
+        #convert string t odatetime
+        filing_date_date = datetime.strptime(filing_date, "%Y-%m-%d")
+        #create date range to get average incase of day of filing date not existing
+        start_date = filing_date_date - timedelta(days = 2)
+        end_date = filing_date_date + timedelta(days = 2)
+        #NEED TO REMEMBER TO SET fiscalDateEnding AS INDEX FOR THIS TO WORK AND ALSO ITS A GOOD THING TO DO IN GENERAL
+        #WARNING WARNING WARNING
+        stock_data = yf.download(ticker, start=start_date, end=end_date, interval="1d")
+        average_close = stock_data['Close'].mean() 
+        marketVal = average_close * balance_sheet.loc[filing_date, 'commonStockSharesOutstanding']
+
+        return marketVal
+    
+    def marketValueForAllDates(balance_sheet: pd.DataFrame, ticker: str):
+        market_values = pd.DataFrame(columns=['marketVal'])
+
+        for filing_date in balance_sheet['fiscalDateEnding']:
+            #Calculate market value for each filing date
+            market_val = Calculations.marketValueForSpecificFilingDate(balance_sheet, ticker, filing_date)
+
+            #Append results
+            market_values.loc[filing_date] = market_val
+        return market_values
+
+
+
     #need to implement book to market and tangible book to market, but that requires implementing getting a rough est of the market price of the
     #stock at the time
+
+'''
+What to do, What to do?:
+
+Need to generate base sql database and decide on database schema. Probably have one db called fundamentals_raw.db and fundamentals.db?
+And have each table in the dbs be the ticker? For fundamentals_raw we can just append the cash flow, balance sheet, and income statements into 
+one pd? idk
+
+Need to implement fetching rough market value of stock at different dates for book to market and tang book to market funcs, maybe another 1 too
+if naive lookup of the exact day of the annual filing doesn't work, check for the day after, if that doesn't work check for the day before, repeat
+til found
+
+'''
