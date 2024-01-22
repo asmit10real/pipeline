@@ -181,3 +181,14 @@ class Calculations:
         return grossIncDivTurn
     def cfEbitDivTurnover(income_statement: pd.DataFrame, cashflow_statement: pd.DataFrame, df: pd.DataFrame):
         ans = (cashflow_statement['operatingCashflow'] + income_statement['incomeTaxExpense'] + income_statement['interestExpense'] + cashflow_statement['depreciationDepletionAndAmortization']) / df['Turnover']
+    def roic(income_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
+        #nopat
+        #nopat = income_statement['operatingIncome'] * (1 - (income_statement['incomeTaxExpense'] / income_statement['incomeBeforeTax']))
+        #ic = balance_sheet['totalCurrentAssets'] - balance_sheet['totalCurrentLiabilities'] - balance_sheet['cashAndCashEquivalentsAtCarryingValue'] + balance_sheet['propertyPlantEquipment']
+        #roic = nopat / invested capital (ic)
+        ans = (income_statement['operatingIncome'] * (1 - (income_statement['incomeTaxExpense'] / income_statement['incomeBeforeTax']))) / (balance_sheet['totalCurrentAssets'] - balance_sheet['totalCurrentLiabilities'] - balance_sheet['cashAndCashEquivalentsAtCarryingValue'] + balance_sheet['propertyPlantEquipment'])
+        return ans
+    def roicAverage3(df = pd.DataFrame):
+        roicAvg3 = df['roic'].rolling(window = 3, min_periods = 1).mean()
+        return roicAvg3
+    
