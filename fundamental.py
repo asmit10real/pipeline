@@ -257,9 +257,7 @@ class Calculations:
         stock_data = yf.download(ticker, start=start_date, end=end_date, interval="1d")
         average_close = stock_data['Close'].mean() 
         marketVal = average_close * balance_sheet.loc[filing_date, 'commonStockSharesOutstanding']
-
         return marketVal
-    
     def marketValueForAllDates(balance_sheet: pd.DataFrame, ticker: str):
         market_values = pd.DataFrame(columns=['marketVal'])
 
