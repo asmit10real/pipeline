@@ -191,4 +191,41 @@ class Calculations:
     def roicAverage3(df = pd.DataFrame):
         roicAvg3 = df['roic'].rolling(window = 3, min_periods = 1).mean()
         return roicAvg3
+    def revsPerShare(income_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
+        revsPShare = income_statement['totalRevenue'] / balance_sheet['commonStockSharesOutstanding']
+        return revsPShare
+    def assets(balance_sheet: pd.DataFrame):
+        return balance_sheet['totalAssets']
+    def assetsPerShare(balance_sheet: pd.DataFrame):
+        return balance_sheet['totalAssets'] / balance_sheet['commonStockSharesOutstanding']
+    def excessCash(balance_sheet: pd.DataFrame):
+        return balance_sheet['cashAndCashEquivalentsAtCarryingValue'] + balance_sheet['longTermInvestments'] - balance_sheet['totalCurrentLiabilities']
+    def netCommonOverhang(balance_sheet: pd.DataFrame, df: pd.DataFrame):
+        return balance_sheet['totalNonCurrentLiabilities'] + balance_sheet['shortTermDebt'] - balance_sheet['shortTermInvestments'] - df['netExcessCash']
+    def bookValuePerShare(balance_sheet: pd.DataFrame):
+        return (balance_sheet['totalAssets'] - balance_sheet['totalLiabilities']) / balance_sheet['commonStockSharesOutstanding']
+    def tangibleBookValuePerShare(balance_sheet: pd.DataFrame):
+        return (balance_sheet['totalAssets'] - balance_sheet['totalLiabilities'] - balance_sheet['intangibleAssets']) / balance_sheet['commonStockSharesOutstanding']
+    #Naive implementation of financial leverage, Roaring Kitty uses an average of this years and previous years iirc
+    def financialLeverage(balance_sheet: pd.DataFrame):
+        return balance_sheet['totalAssets'] / balance_sheet['totalShareholderEquity']
+    def returnOnEquity(income_statement: pd.DataFrame, df: pd.DataFrame):
+        return income_statement['netIncome'] * df['turnover'] * df['finLeverage']
+    #Need to implement querying data from sql or yf (if not in sql) to get historic market value of stock for different reporting periods
+    def dividendsPerShare(cashflow_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
+        return cashflow_statement['dividendPayout'] / balance_sheet['commonStockSharesOutstanding']
+    def ebitdaPerShare(cashflow_statement: pd.DataFrame, balance_sheet: pd.DataFrame, income_statement: pd.DataFrame):
+        return (income_statement['netIncome'] + income_statement['incomeTaxExpense'] + income_statement['interestExpense'] + income_statement['depreciationAndAmortization']) / balance_sheet['commonStockSharesOutstanding']
+    def ebitdaPerShareAverage3(df: pd.DataFrame):
+        return df['ebitdaPerShare'].rolling(window = 3, min_periods= 1).mean()
+    def ebitdaPerShareAverage7(df: pd.DataFrame):
+        return df['ebitdaPerShare'].rolling(window = 7, min_periods = 1).mean()
+    #Should be subtrating income from minority interest, haven't implemented it
+    def commonEarningsPerShare(income_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
+        return income_statement['netIncomeFromContinuingOperations'] / balance_sheet['commonStockSharesOutstanding']
+    def commonEarningsPerShareAverage3(df: pd.DataFrame):
+        return df['commonEarningsPerShare'].rolling(window = 3, min_periods = 1).mean()
+    def commonEarningsPerShareAverage7(df: pd.DataFrame):
+        return df['commonEarningsPerShare'].rolling(window = 7, min_periods = 1).mean()
+    
     
