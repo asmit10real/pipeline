@@ -159,10 +159,10 @@ def calc(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cashflow_s
 #print(msft.balance_sheet.iloc[0]) #shares
 class Calculations:
     def shares(balance_sheet: pd.DataFrame):
-        outstandingshares = balance_sheet.loc[:, 'commonStockSharesOutstanding']
+        outstandingshares = balance_sheet['commonStockSharesOutstanding']
         return outstandingshares
     def revenueTotal(income_statement: pd.DataFrame):
-        income = income_statement.loc[:, 'totalRevenue']
+        income = income_statement['totalRevenue']
         return income
     def revenueTotalAverage3(income_statement: pd.DataFrame):
         revenueAverage = income_statement['totalRevenue'].rolling(window = 3, min_periods = 1).mean()
@@ -180,15 +180,14 @@ class Calculations:
                    income_statement['grossProfit'] * df['turnover'])
         return grossIncDivTurn
     def cfEbitDivTurnover(income_statement: pd.DataFrame, cashflow_statement: pd.DataFrame, df: pd.DataFrame):
-        ans = (cashflow_statement['operatingCashflow'] + income_statement['incomeTaxExpense'] + income_statement['interestExpense'] + cashflow_statement['depreciationDepletionAndAmortization']) / df['Turnover']
+        return (cashflow_statement['operatingCashflow'] + income_statement['incomeTaxExpense'] + income_statement['interestExpense'] + cashflow_statement['depreciationDepletionAndAmortization']) / df['Turnover']
     def roic(income_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
         #nopat
         #nopat = income_statement['operatingIncome'] * (1 - (income_statement['incomeTaxExpense'] / income_statement['incomeBeforeTax']))
         #ic = balance_sheet['totalCurrentAssets'] - balance_sheet['totalCurrentLiabilities'] - balance_sheet['cashAndCashEquivalentsAtCarryingValue'] + balance_sheet['propertyPlantEquipment']
         #roic = nopat / invested capital (ic)
-        ans = (income_statement['operatingIncome'] * (1 - (income_statement['incomeTaxExpense'] / income_statement['incomeBeforeTax']))) / (balance_sheet['totalCurrentAssets'] - balance_sheet['totalCurrentLiabilities'] - balance_sheet['cashAndCashEquivalentsAtCarryingValue'] + balance_sheet['propertyPlantEquipment'])
-        return ans
-    def roicAverage3(df = pd.DataFrame):
+        return (income_statement['operatingIncome'] * (1 - (income_statement['incomeTaxExpense'] / income_statement['incomeBeforeTax']))) / (balance_sheet['totalCurrentAssets'] - balance_sheet['totalCurrentLiabilities'] - balance_sheet['cashAndCashEquivalentsAtCarryingValue'] + balance_sheet['propertyPlantEquipment'])
+    def roicAverage3(df: pd.DataFrame):
         roicAvg3 = df['roic'].rolling(window = 3, min_periods = 1).mean()
         return roicAvg3
     def revsPerShare(income_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
