@@ -226,5 +226,17 @@ class Calculations:
         return df['commonEarningsPerShare'].rolling(window = 3, min_periods = 1).mean()
     def commonEarningsPerShareAverage7(df: pd.DataFrame):
         return df['commonEarningsPerShare'].rolling(window = 7, min_periods = 1).mean()
-    
-    
+    def simpleFreeCashFlowPerShare(income_statement: pd.DataFrame, cashflow_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
+        return (cashflow_statement['netIncome'] + income_statement['depreciationAndAmortization'] - cashflow_statement['capitalExpenditures']) / balance_sheet['commonStockSharesOutstanding']
+    def simpleFreeCashFlowPerShareAverage3(df: pd.DataFrame):
+        return df['simpleFreeCashFlow'].rolling(window = 3, min_periods = 1).mean()
+    def simpleFreeCashFlowPerShareAverage7(df: pd.DataFrame):
+        return df['simpleFreeCashFlow'].rolling(window = 7, min_periods = 1).mean()
+    def netCashFlowPerShare(cashflow_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
+        return cashflow_statement['operatingCashflow'] / balance_sheet['commonStockSharesOutstanding']
+    def netCashFlowPerShareAverage3(df: pd.DataFrame):
+        return df['netCashFlowPerShare'].rolling(window = 3, min_periods = 1).mean()
+    def netCashFlowPerShareAverage3(df: pd.DataFrame):
+        return df['netCashFlowPerShare'].rolling(window = 7, min_periods = 1).mean()
+    def netProfitMargin(income_statement: pd.DataFrame):
+        return income_statement['netIncome'] / income_statement['totalRevenue']
