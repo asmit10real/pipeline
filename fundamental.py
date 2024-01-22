@@ -240,3 +240,5 @@ class Calculations:
         return df['netCashFlowPerShare'].rolling(window = 7, min_periods = 1).mean()
     def netProfitMargin(income_statement: pd.DataFrame):
         return income_statement['netIncome'] / income_statement['totalRevenue']
+    def bookValue(balance_sheet: pd.DataFrame):
+        return (balance_sheet['totalAssets'] - balance_sheet['totalLiabilities'] - balance_sheet['intangibleAssets'])
