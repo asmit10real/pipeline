@@ -106,7 +106,6 @@ msft.balance_sheet
 msft.cashflow
 '''
 
-#Probably should use AlphaVantage free plan is 25 calls/day, $25/month = 30 calls per minute
 
 import yfinance as yf
 import pandas as pd
@@ -155,8 +154,74 @@ def getStatements(stock: str):
     return (balance_sheet, income_statement, cashflow_statement)
 # qqq = get("QQQ")
 #calc(*qqq)
-def calc(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cashflow_statement: pd.DataFrame):
-    Calculations.shares(balance_sheet)
+#Actually creates Roaring Kitty's Spreadsheet
+def createSheet(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cashflow_statement: pd.DataFrame) -> pd.DataFrame:
+    years = [2000, 2001]
+    metrics = ['period_end', 'outstanding_shares', 'revenues']
+
+    balance_sheet = balance_sheet.sort_index(ascending=True)
+    income_statement = income_statement.sort_index(ascending=True)
+    cashflow_statement = cashflow_statement.sort_index(ascending=True)
+
+    #Verify all the dates line up
+    if(balance_sheet.iloc[0]['fiscalDateEnding'] != income_statement.iloc[0]['fiscalDateEnding'] or cashflow_statement.iloc[0]['fiscalDateEnding'] != income_statement.iloc[0]['fiscalDateEnding']):
+        return "FUNDAMENTAL DATA DATES DO NOT ALIGN"
+    
+    resultDf = pd.DataFrame(index = metrics, columns = years)
+    calculationsDf = pd.DataFrame()
+    
+    # Need to substantially rework some of these functions. Wont work as written
+    # Basically any function that works with a mix of the financial statements and the result dataframe at the same time needs to be looked at
+
+    resultDf.loc['PeriodEnd'] = income_statement['fiscalDateEnding'].T
+    resultDf.loc['OutstandingShares'] = Calculations.shares(balance_sheet).T
+    resultDf.loc['Revenues'] = Calculations.revenueTotal(income_statement).T
+    resultDf.loc['RevenueAverage3'] = Calculations.revenueTotalAverage3(income_statement).T
+    resultDf.loc['Turnover'] = Calculations.turnover(income_statement, balance_sheet).T
+    resultDf.loc['TurnoverAverage3'] = Calculations.turnoverAverage3(resultDf)
+    resultDf.loc['Gross Income / Turnover'] = Calculations.grossIncDivTurnover(income_statement, resultDf).T
+    resultDf.loc['Cashflow EBITDA / Turnover'] = Calculations.cfEbitDivTurnover(income_statement, cashflow_statement, resultDf).T
+    resultDf.loc['Return On Investment Capital'] = Calculations.roic(income_statement, balance_sheet).T
+    resultDf.loc['roicAverage3'] = Calculations.roicAverage3(resultDf)
+    resultDf.loc['RevenuePerShare'] = Calculations.revsPerShare(income_statement, balance_sheet).T
+    resultDf.loc['Total Assets'] = Calculations.assets(balance_sheet).T
+    resultDf.loc['Assets Per Shares'] = Calculations.assetsPerShare(balance_sheet).T
+    resultDf.loc['Excess Cash'] = Calculations.excessCash(balance_sheet).T
+    resultDf.loc['Net Common Overhang'] = Calculations.netCommonOverhang(balance_sheet, resultDf).T
+    resultDf.loc['Book Value Per Share'] = Calculations.bookValuePerShare(balance_sheet).T
+    resultDf.loc['Tangible Book Value Per Share'] = Calculations.tangibleBookValuePerShare(balance_sheet).T
+    resultDf.loc['Return On Equity'] = Calculations.returnOnEquity(income_statement, resultDf).T
+    #NEED TO IMPLEMENT BOOK TO MARKET FUNC | should be called here
+    resultDf.loc['Dividend Paid Per Share'] = Calculations.dividendsPerShare(cashflow_statement, balance_sheet).T
+    resultDf.loc['EBITDA Per Share'] = Calculations.ebitdaPerShare(cashflow_statement, balance_sheet, income_statement).T
+    resultDf.loc['EBITDA Average 3yr'] = Calculations.ebitdaPerShareAverage3(resultDf)
+    resultDf.loc['EBITDA Average 7yr'] = Calculations.ebitdaPerShareAverage7(resultDf)
+    resultDf.loc['Net Income Per Share'] = Calculations.commonEarningsPerShare(income_statement, balance_sheet).T
+    resultDf.loc['Net Income Per Share Average 3'] = Calculations.commonEarningsPerShareAverage3(resultDf)
+    resultDf.loc["Net Income Per Share Average 7"] = Calculations.commonEarningsPerShareAverage7(resultDf)
+    resultDf.loc['Simple Free Cashflow Per Share'] = Calculations.simpleFreeCashFlowPerShare(income_statement, cashflow_statement, balance_sheet).T
+    resultDf.loc['Simple Free Cashflow Per Share Average 3'] = Calculations.simpleFreeCashFlowPerShareAverage3(resultDf)
+    resultDf.loc['Simple Free Cashflow Per Share Average 7'] = Calculations.simpleFreeCashFlowPerShareAverage7(resultDf)
+    resultDf.loc['Net Cashflow Per Share'] = Calculations.netCashFlowPerShare(cashflow_statement, balance_sheet).T
+    resultDf.loc['Net Cashflow Per Share Average 3'] = Calculations.netCashFlowPerShareAverage3(resultDf)
+    resultDf.loc['Net Cashflow Per Share Average 7'] = Calculations.netCashFlowPerShareAverage7(resultDf)
+    resultDf.loc['Net Profit Margin'] = Calculations.netProfitMargin(income_statement).T
+    resultDf.loc['Book Value'] = Calculations.bookValue(balance_sheet).T
+    resultDf.loc['Tangible Book Value'] = Calculations.tangibleBookValue(balance_sheet, resultDf)
+
+
+    print(resultDf)
+
+    '''
+    while(placeHolder < balance_sheet.shape[0] - 1):
+        df['Period_End'][balance_sheet.iloc[placeHolder]['fiscalDateEnding']] = balance_sheet.iloc[placeHolder]['fiscalDateEnding']
+
+        df['Outstanding_Shares'][balance_sheet.iloc[placeHolder]['fiscalDateEnding']] = balance_sheet.iloc[placeHolder]['commonStockSharesOutstanding']
+
+        placeHolder += 1
+        return 0
+    '''
+    #Calculations.shares(balance_sheet)
 #print(msft.balance_sheet.iloc[0]) #shares
 class Calculations:
     def shares(balance_sheet: pd.DataFrame):
@@ -173,7 +238,7 @@ class Calculations:
         turnover = income_statement['totalRevenue'] / balance_sheet['totalAssets']
         return turnover
     def turnoverAverage3(df: pd.DataFrame):
-        turnoverAvg = df['turnover'].rolling(window = 3, min_periods=1).mean()
+        turnoverAvg = df.loc['Turnover'].rolling(window = 3, min_periods=1).mean()
         return turnoverAvg
     def grossIncDivTurnover(income_statement: pd.DataFrame, df: pd.DataFrame):
         grossIncDivTurn = np.where(df['turnover'] > 1, 
@@ -237,14 +302,14 @@ class Calculations:
         return cashflow_statement['operatingCashflow'] / balance_sheet['commonStockSharesOutstanding']
     def netCashFlowPerShareAverage3(df: pd.DataFrame):
         return df['netCashFlowPerShare'].rolling(window = 3, min_periods = 1).mean()
-    def netCashFlowPerShareAverage3(df: pd.DataFrame):
+    def netCashFlowPerShareAverage7(df: pd.DataFrame):
         return df['netCashFlowPerShare'].rolling(window = 7, min_periods = 1).mean()
     def netProfitMargin(income_statement: pd.DataFrame):
         return income_statement['netIncome'] / income_statement['totalRevenue']
     def bookValue(balance_sheet: pd.DataFrame):
         return (balance_sheet['totalAssets'] - balance_sheet['totalLiabilities'])
     def tangibleBookValue(balance_sheet: pd.DataFrame, df: pd.DataFrame):
-        return df['bookValue'] - balance_sheet['intangibleAssets']
+        return df['Book Value'] - balance_sheet['intangibleAssets']
     def marketValueForSpecificFilingDate(balance_sheet: pd.DataFrame, ticker: str, filing_date: str):
         #idk if any of this is necessarily the best implementation or necessary but let's work from it
         #convert string t odatetime
@@ -273,16 +338,9 @@ class Calculations:
 
     #need to implement book to market and tangible book to market, but that requires implementing getting a rough est of the market price of the
     #stock at the time
-
-'''
-What to do, What to do?:
-
-Need to generate base sql database and decide on database schema. Probably have one db called fundamentals_raw.db and fundamentals.db?
-And have each table in the dbs be the ticker? For fundamentals_raw we can just append the cash flow, balance sheet, and income statements into 
-one pd? idk
-
-Need to implement fetching rough market value of stock at different dates for book to market and tang book to market funcs, maybe another 1 too
-if naive lookup of the exact day of the annual filing doesn't work, check for the day after, if that doesn't work check for the day before, repeat
-til found
-
-'''
+#b, c, v = getStatements("RIO")
+#x = Calculations.marketValueForAllDates(b, "RIO")
+#print(x)
+#createSheet(b, c, v)
+#Syntax for getting the last fin statement where b is the type of fin statement
+#print(b.iloc[-1])
