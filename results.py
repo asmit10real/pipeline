@@ -7,6 +7,9 @@ import performance as perf
 import sql as sql
 import signals as signals
 import indicators as indicators
+import indicators.vwap as vwap
+import indicators.avwap as avwap
+import indicators.trendline as trendline
 #Plots
 import matplotlib
 matplotlib.use('Qt5Agg')  # or 'TkAgg', 'GTK3Agg', etc.
@@ -130,9 +133,9 @@ def processDataMultiple(stocks: list, dateFrom: str, dateTO: str, lookback: int,
         data = sql.getData(stock, dateFrom, dateTO, connRaw)
         debug = data.columns
         logger.critical(debug)
-        data['VWAP'] = indicators.VWAP(data)
+        data['VWAP'] = vwap.VWAP(data)
         #window_days = 2 is vwap anchored to yesterday
-        data['AVWAP'] = indicators.AVWAP(data, 2)
+        data['AVWAP'] = avwap.AVWAP(data, 2)
         #logger.critical(data['VWAP'])
         #logger.critical(data['AVWAP'])
         #logger.critical(f'DATA FROM sql.getData {data}')
@@ -146,7 +149,7 @@ def processDataMultiple(stocks: list, dateFrom: str, dateTO: str, lookback: int,
         logger.warning('Creating copy of data called data2 for real pricing performance calculations')
         #Save copy of data for real pricing for performance calcs
         data2 = data.copy()
-        data, data2 = indicators.getTrend(data, data2, lookback, view)
+        data, data2 = trendline.getTrend(data, data2, lookback, view)
         #Assign position based on signals.signal(s) np.where(signal1 + signal2 = 2, 1, 0)
         logger.warning('Attempting to set position based on data')
         #STRATEGY
