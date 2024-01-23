@@ -1,3 +1,11 @@
 {
-    "test":[1,2,3]
+    "variables": {
+        "testPerformance": false,
+        "lookback": 30,
+        "view": 30,
+        "strategy": 3,
+        "dateFROM": "2023-01-01",
+        "dateTO": "2024-01-05",
+        "plotMe": false
+    }
 }

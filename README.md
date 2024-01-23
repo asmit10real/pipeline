@@ -1,3 +1,5 @@
+**GOAL**: The goal of this program is to allow for quick multivariate analysis for a wide range of stock trading hypotheses.
+
 ## fundamental.py
   - Used for all handling of fundamental data and calculations related to it. This is where all the Roaring Kitty analysis happens
   - Very much a WIP
