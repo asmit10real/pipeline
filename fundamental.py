@@ -155,7 +155,7 @@ def getStatements(stock: str):
 # qqq = get("QQQ")
 #calc(*qqq)
 #Actually creates Roaring Kitty's Spreadsheet
-def createSheet(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cashflow_statement: pd.DataFrame) -> pd.DataFrame:
+def createSheet(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cashflow_statement: pd.DataFrame, tickr: str) -> pd.DataFrame:
     years = [2000, 2001]
     metrics = ['period_end', 'outstanding_shares', 'revenues']
 
@@ -168,8 +168,12 @@ def createSheet(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cas
         return "FUNDAMENTAL DATA DATES DO NOT ALIGN"
     
     resultDf = pd.DataFrame(index = metrics, columns = years)
+
     calculationsDf = pd.DataFrame()
     
+
+    marketValuesDf = Calculations.marketValueForAllDates(balance_sheet, tickr)
+
     # Need to substantially rework some of these functions. Wont work as written
     # Basically any function that works with a mix of the financial statements and the result dataframe at the same time needs to be looked at
 
@@ -191,7 +195,17 @@ def createSheet(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cas
     resultDf.loc['Book Value Per Share'] = Calculations.bookValuePerShare(balance_sheet).T
     resultDf.loc['Tangible Book Value Per Share'] = Calculations.tangibleBookValuePerShare(balance_sheet).T
     resultDf.loc['Return On Equity'] = Calculations.returnOnEquity(income_statement, resultDf).T
+    resultDf.loc['Book Value'] = Calculations.bookValue(balance_sheet).T
+    resultDf.loc['Tangible Book Value'] = Calculations.tangibleBookValue(balance_sheet, resultDf)
+    resultDf.loc['Book To Market'] = Calculations.bookToMarket(marketValuesDf, resultDf).T #I really need to check if i need to transpose funcs like this its kinda confusing tbh
     #NEED TO IMPLEMENT BOOK TO MARKET FUNC | should be called here
+    resultDf.loc['Book to Market * Return On Equity'] = Calculations.bookToReturnOnEquity(resultDf)
+    resultDf.loc['BtM Return On Equity 3yr'] = resultDf['Book to Market * Return on Equity'].rolling(window = 3, min_periods = 1).mean()
+    resultDf.loc['BtM Return On Equity 5yr'] = resultDf['Book to Market * Return on Equity'].rolling(window = 5, min_periods = 1).mean()
+    resultDf.loc['Tangible Book To Market'] = Calculations.tangibleBookToMarket(marketValuesDf, resultDf)
+    resultDf.loc['Tangible Book to Market * Return On Equity'] = Calculations.tangibleBookToReturnOnEquity(resultDf)
+    resultDf.loc['Tangible BtM Return on Equity 3yr'] = resultDf['Tangible Book To Market * Return On Equity'].rolling(window = 3, min_periods = 1).mean()
+    resultDf.loc['Tangible BtM Return on Equity 5yr'] = resultDf['Tangible Book To Market * Return On Equity'].rolling(window = 5, min_periods = 1).mean()
     resultDf.loc['Dividend Paid Per Share'] = Calculations.dividendsPerShare(cashflow_statement, balance_sheet).T
     resultDf.loc['EBITDA Per Share'] = Calculations.ebitdaPerShare(cashflow_statement, balance_sheet, income_statement).T
     resultDf.loc['EBITDA Average 3yr'] = Calculations.ebitdaPerShareAverage3(resultDf)
@@ -206,8 +220,7 @@ def createSheet(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cas
     resultDf.loc['Net Cashflow Per Share Average 3'] = Calculations.netCashFlowPerShareAverage3(resultDf)
     resultDf.loc['Net Cashflow Per Share Average 7'] = Calculations.netCashFlowPerShareAverage7(resultDf)
     resultDf.loc['Net Profit Margin'] = Calculations.netProfitMargin(income_statement).T
-    resultDf.loc['Book Value'] = Calculations.bookValue(balance_sheet).T
-    resultDf.loc['Tangible Book Value'] = Calculations.tangibleBookValue(balance_sheet, resultDf)
+    
 
 
     print(resultDf)
@@ -276,6 +289,14 @@ class Calculations:
         return balance_sheet['totalAssets'] / balance_sheet['totalShareholderEquity']
     def returnOnEquity(income_statement: pd.DataFrame, df: pd.DataFrame):
         return income_statement['netIncome'] * df['turnover'] * df['finLeverage']
+    def bookToMarket(marketValues: pd.DataFrame, resultFrame: pd.DataFrame):
+        return resultFrame['Book Value'] / marketValues['marketVal']
+    def tangibleBookToMarket(marketValues: pd.DataFrame, resultFrame: pd.DataFrame):
+        return resultFrame['Tangible Book Value'] / marketValues['marketVal']
+    def bookToReturnOnEquity(resultFrame: pd.DataFrame):
+        return resultFrame['Book To Market'] * resultFrame['Return On Equity']
+    def tangibleBookToReturnOnEquity(resultFrame: pd.DataFrame):
+        return resultFrame['Tangible Book To Market'] * resultFrame['Return On Equity']
     #Need to implement querying data from sql or yf (if not in sql) to get historic market value of stock for different reporting periods
     def dividendsPerShare(cashflow_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
         return cashflow_statement['dividendPayout'] / balance_sheet['commonStockSharesOutstanding']
@@ -311,6 +332,8 @@ class Calculations:
     def tangibleBookValue(balance_sheet: pd.DataFrame, df: pd.DataFrame):
         return df['Book Value'] - balance_sheet['intangibleAssets']
     def marketValueForSpecificFilingDate(balance_sheet: pd.DataFrame, ticker: str, filing_date: str):
+        balance_sheet = balance_sheet.copy()
+        balance_sheet.set_index("fiscalDateEnding", inplace = True)
         #idk if any of this is necessarily the best implementation or necessary but let's work from it
         #convert string t odatetime
         filing_date_date = datetime.strptime(filing_date, "%Y-%m-%d")
@@ -321,12 +344,12 @@ class Calculations:
         #WARNING WARNING WARNING
         stock_data = yf.download(ticker, start=start_date, end=end_date, interval="1d")
         average_close = stock_data['Close'].mean() 
-        marketVal = average_close * balance_sheet.loc[filing_date, 'commonStockSharesOutstanding']
+        marketVal = average_close * int(balance_sheet.loc[filing_date, 'commonStockSharesOutstanding'])
         return marketVal
-    def marketValueForAllDates(balance_sheet: pd.DataFrame, ticker: str):
+    def marketValueForAllDates(balance_sheet: pd.DataFrame, ticker: str) -> pd.DataFrame:
         market_values = pd.DataFrame(columns=['marketVal'])
 
-        for filing_date in balance_sheet['fiscalDateEnding']:
+        for filing_date in balance_sheet.loc[:, 'fiscalDateEnding']:
             #Calculate market value for each filing date
             market_val = Calculations.marketValueForSpecificFilingDate(balance_sheet, ticker, filing_date)
 
@@ -338,9 +361,10 @@ class Calculations:
 
     #need to implement book to market and tangible book to market, but that requires implementing getting a rough est of the market price of the
     #stock at the time
-#b, c, v = getStatements("RIO")
-#x = Calculations.marketValueForAllDates(b, "RIO")
-#print(x)
+b, c, v = getStatements("RIO")
+print(b)
+x = Calculations.marketValueForAllDates(b, "RIO")
+print(type(x))
 #createSheet(b, c, v)
 #Syntax for getting the last fin statement where b is the type of fin statement
 #print(b.iloc[-1])
