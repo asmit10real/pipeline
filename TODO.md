@@ -4,5 +4,6 @@
 
 ## Want to implement PCA analysis to test strength of different variable values for indicators
 
-## Fix this error on running main.py: valueerror:%20Cannot%20set%20a%20DataFrame%20with%20multiple%20columns%20to%20the%20single%20column%20VWAP
+## Fix this error on running main.py: valueerror:Cannot set DataFrame multiple columns to the single column VWAP
+
 
