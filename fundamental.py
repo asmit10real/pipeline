@@ -115,6 +115,11 @@ from datetime import datetime, timedelta
 from pandas import json_normalize
 from dotenv import load_dotenv
 import os
+import logging
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG) #Debug or Critical are used
+
+logger.debug('start of fundamental.py')
 
 load_dotenv()  # This loads the variables from .env into the environment
 apikey = os.environ.get('API_KEY')
@@ -129,7 +134,15 @@ reports = dictr['annualReports']
 df = json_normalize(reports)
 '''
 
+def convert_columns(df: pd.DataFrame):
+    columns_to_convert = df.columns.drop('fiscalDateEnding')
+    df[columns_to_convert] = df[columns_to_convert].apply(pd.to_numeric, errors='coerce')
+    return df
+
+
 def getStatements(stock: str):
+    logger.debug('getting statements')
+    #REALLY NEED TO STORE THESE IN SQL
     # Call alphavantage api for balance sheet, cash flow, and income_statement for stock
     url = f'https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol={stock}&apikey={apikey}' #Have to change this for each thing
     r = requests.get(url)
@@ -151,75 +164,199 @@ def getStatements(stock: str):
     # Set each of the csvs to dataframes
     #income_statement = income_statement.to_Frame()
     #cashflow_statement = cashflow_statement.to_Frame()
+    logger.debug('returning statements')
     return (balance_sheet, income_statement, cashflow_statement)
 # qqq = get("QQQ")
 #calc(*qqq)
 #Actually creates Roaring Kitty's Spreadsheet
 def createSheet(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cashflow_statement: pd.DataFrame, tickr: str) -> pd.DataFrame:
-    years = [2000, 2001]
-    metrics = ['period_end', 'outstanding_shares', 'revenues']
+
+    # Extract the 'fiscalDateEnding' columns from each DataFrame
+    dates_balance_sheet = set(balance_sheet['fiscalDateEnding'])
+    dates_income_statement = set(income_statement['fiscalDateEnding'])
+    dates_cash_flow_statement = set(cashflow_statement['fiscalDateEnding'])
+    # Add more dates sets as needed
+
+    # Find the intersection (common dates) across all DataFrames
+    common_dates = dates_balance_sheet.intersection(dates_income_statement, dates_cash_flow_statement)
+    # Add more sets as needed
+
+    # Filter each DataFrame to include only rows with common dates
+    balance_sheet = balance_sheet[balance_sheet['fiscalDateEnding'].isin(common_dates)]
+    income_statement = income_statement[income_statement['fiscalDateEnding'].isin(common_dates)]
+    cashflow_statement = cashflow_statement[cashflow_statement['fiscalDateEnding'].isin(common_dates)]
+    # Apply this filtering to all relevant DataFrames
+
+    # Now proceed with your data processing on these filtered DataFrames
+
+    years = []
+
+    for year in income_statement['fiscalDateEnding']:
+        years.append(datetime.strptime(year, '%Y-%m-%d'))
+    
+
+
+
 
     balance_sheet = balance_sheet.sort_index(ascending=True)
+    logger.debug(balance_sheet)
     income_statement = income_statement.sort_index(ascending=True)
     cashflow_statement = cashflow_statement.sort_index(ascending=True)
+    balance_sheet = convert_columns(balance_sheet)
+    income_statement = convert_columns(income_statement)
+    cashflow_statement = convert_columns(cashflow_statement)
+
+    years = []
+    metrics = ['PeriodEnd', 'OutstandingShares', 'Revenues']
+
+    
+    for year in income_statement['fiscalDateEnding']:
+        years.append(year)
+    
+    print(years)
+
+    print(cashflow_statement)
 
     #Verify all the dates line up
+    logger.debug('Verifying dates of financial statements align')
     if(balance_sheet.iloc[0]['fiscalDateEnding'] != income_statement.iloc[0]['fiscalDateEnding'] or cashflow_statement.iloc[0]['fiscalDateEnding'] != income_statement.iloc[0]['fiscalDateEnding']):
         return "FUNDAMENTAL DATA DATES DO NOT ALIGN"
     
     resultDf = pd.DataFrame(index = metrics, columns = years)
+    print(resultDf)
 
     calculationsDf = pd.DataFrame()
     
 
     marketValuesDf = Calculations.marketValueForAllDates(balance_sheet, tickr)
-
+    # print(marketValuesDf)
+    logger.debug('Created calculations, result, and marketValue frames')
     # Need to substantially rework some of these functions. Wont work as written
     # Basically any function that works with a mix of the financial statements and the result dataframe at the same time needs to be looked at
+    debug = income_statement['fiscalDateEnding']
+    labelList = income_statement['fiscalDateEnding'].tolist()
 
-    resultDf.loc['PeriodEnd'] = income_statement['fiscalDateEnding'].T
-    resultDf.loc['OutstandingShares'] = Calculations.shares(balance_sheet).T
-    resultDf.loc['Revenues'] = Calculations.revenueTotal(income_statement).T
+    resultDf.loc['PeriodEnd'] = labelList
+    print('RESULT DF')
+    print(resultDf)
+    shares_series = Calculations.shares(balance_sheet)
+    print(shares_series)
+    print('RESULT DF COLUMNS')
+    print(resultDf.columns)
+    shares_series.index = resultDf.columns  # Aligning the Series index with DataFrame columns
+    print('RESULT DF AFTER SHARES')
+    print(resultDf)
+    resultDf.loc['OutstandingShares'] = shares_series
+    #resultDf.loc['OutstandingShares'] = Calculations.shares(balance_sheet)
+    result_series = Calculations.revenueTotal(income_statement)
+    result_series.index = resultDf.columns
+    resultDf.loc['Revenues'] = result_series
+    #resultDf.loc['Revenues'] = Calculations.revenueTotal(income_statement).T
     resultDf.loc['RevenueAverage3'] = Calculations.revenueTotalAverage3(income_statement).T
-    resultDf.loc['Turnover'] = Calculations.turnover(income_statement, balance_sheet).T
+    print('COLUMNS COLUMNS COLUMNS')
+    print(income_statement['totalRevenue'])
+    print(balance_sheet['totalAssets'])
+    turnover_series = Calculations.turnover(income_statement, balance_sheet)
+    turnover_series.index = resultDf.columns
+    resultDf.loc['Turnover'] = turnover_series
+    #resultDf.loc['Turnover'] = Calculations.turnover(income_statement, balance_sheet).T
     resultDf.loc['TurnoverAverage3'] = Calculations.turnoverAverage3(resultDf)
-    resultDf.loc['Gross Income / Turnover'] = Calculations.grossIncDivTurnover(income_statement, resultDf).T
-    resultDf.loc['Cashflow EBITDA / Turnover'] = Calculations.cfEbitDivTurnover(income_statement, cashflow_statement, resultDf).T
-    resultDf.loc['Return On Investment Capital'] = Calculations.roic(income_statement, balance_sheet).T
+    grincturn_series = Calculations.grossIncDivTurnover(income_statement, resultDf)
+    grincturn_series.index = resultDf.columns
+    print(grincturn_series)
+    resultDf.loc['Gross Income / Turnover'] = grincturn_series
+    print(resultDf)
+    fin_series = Calculations.financialLeverage(balance_sheet)
+    fin_series.index = resultDf.columns
+    print(fin_series)
+    resultDf.loc['Financial Leverage'] = fin_series
+    print(resultDf)
+    cf_series = Calculations.cfEbitDivTurnover(income_statement, cashflow_statement, resultDf)
+    print(cf_series)
+    cf_series.index = resultDf.columns
+    resultDf.loc['Cashflow EBITDA / Turnover'] = cf_series
+    roic_series = Calculations.roic(income_statement, balance_sheet)
+    roic_series.index = resultDf.columns
+    resultDf.loc['Return On Investment Capital'] = roic_series
     resultDf.loc['roicAverage3'] = Calculations.roicAverage3(resultDf)
-    resultDf.loc['RevenuePerShare'] = Calculations.revsPerShare(income_statement, balance_sheet).T
-    resultDf.loc['Total Assets'] = Calculations.assets(balance_sheet).T
-    resultDf.loc['Assets Per Shares'] = Calculations.assetsPerShare(balance_sheet).T
-    resultDf.loc['Excess Cash'] = Calculations.excessCash(balance_sheet).T
-    resultDf.loc['Net Common Overhang'] = Calculations.netCommonOverhang(balance_sheet, resultDf).T
-    resultDf.loc['Book Value Per Share'] = Calculations.bookValuePerShare(balance_sheet).T
-    resultDf.loc['Tangible Book Value Per Share'] = Calculations.tangibleBookValuePerShare(balance_sheet).T
-    resultDf.loc['Return On Equity'] = Calculations.returnOnEquity(income_statement, resultDf).T
-    resultDf.loc['Book Value'] = Calculations.bookValue(balance_sheet).T
-    resultDf.loc['Tangible Book Value'] = Calculations.tangibleBookValue(balance_sheet, resultDf)
-    resultDf.loc['Book To Market'] = Calculations.bookToMarket(marketValuesDf, resultDf).T #I really need to check if i need to transpose funcs like this its kinda confusing tbh
+    revPshare_series = Calculations.revsPerShare(income_statement, balance_sheet)
+    revPshare_series.index = resultDf.columns
+    resultDf.loc['RevenuePerShare'] = revPshare_series
+    assets_series = Calculations.assets(balance_sheet)
+    assets_series.index = resultDf.columns
+    resultDf.loc['Total Assets'] = assets_series
+    print(resultDf)
+    assetsPshare_series = Calculations.assetsPerShare(resultDf)
+    assetsPshare_series.index = resultDf.columns
+    resultDf.loc['Assets Per Shares'] = assetsPshare_series
+    excessCash_series = Calculations.excessCash(balance_sheet)
+    excessCash_series.index = resultDf.columns
+    resultDf.loc['Excess Cash'] = excessCash_series
+    print(resultDf)
+    neo_series = Calculations.netCommonOverhang(balance_sheet, resultDf)
+    neo_series.index = resultDf.columns
+    resultDf.loc['Net Common Overhang'] = neo_series
+    bvps_series = Calculations.bookValuePerShare(balance_sheet)
+    bvps_series.index = resultDf.columns
+    resultDf.loc['Book Value Per Share'] = bvps_series
+    print(resultDf)
+    tbvps_series = Calculations.tangibleBookValuePerShare(balance_sheet)
+    tbvps_series.index = resultDf.columns
+    resultDf.loc['Tangible Book Value Per Share'] = tbvps_series
+    roe_series = Calculations.returnOnEquity(income_statement, resultDf)
+    roe_series.index = resultDf.columns
+    resultDf.loc['Return On Equity'] = roe_series
+    bvalue_series = Calculations.bookValue(balance_sheet)
+    bvalue_series.index = resultDf.columns
+    resultDf.loc['Book Value'] = bvalue_series
+    tbvalue_series = Calculations.tangibleBookValue(balance_sheet, resultDf)
+    tbvalue_series.index = resultDf.columns
+    resultDf.loc['Tangible Book Value'] = tbvalue_series
+    btm_series = Calculations.bookToMarket(marketValuesDf, resultDf)
+    btm_series.index = resultDf.columns
+    resultDf.loc['Book To Market'] = btm_series #I really need to check if i need to transpose funcs like this its kinda confusing tbh
     #NEED TO IMPLEMENT BOOK TO MARKET FUNC | should be called here
-    resultDf.loc['Book to Market * Return On Equity'] = Calculations.bookToReturnOnEquity(resultDf)
-    resultDf.loc['BtM Return On Equity 3yr'] = resultDf['Book to Market * Return on Equity'].rolling(window = 3, min_periods = 1).mean()
-    resultDf.loc['BtM Return On Equity 5yr'] = resultDf['Book to Market * Return on Equity'].rolling(window = 5, min_periods = 1).mean()
-    resultDf.loc['Tangible Book To Market'] = Calculations.tangibleBookToMarket(marketValuesDf, resultDf)
-    resultDf.loc['Tangible Book to Market * Return On Equity'] = Calculations.tangibleBookToReturnOnEquity(resultDf)
-    resultDf.loc['Tangible BtM Return on Equity 3yr'] = resultDf['Tangible Book To Market * Return On Equity'].rolling(window = 3, min_periods = 1).mean()
-    resultDf.loc['Tangible BtM Return on Equity 5yr'] = resultDf['Tangible Book To Market * Return On Equity'].rolling(window = 5, min_periods = 1).mean()
-    resultDf.loc['Dividend Paid Per Share'] = Calculations.dividendsPerShare(cashflow_statement, balance_sheet).T
-    resultDf.loc['EBITDA Per Share'] = Calculations.ebitdaPerShare(cashflow_statement, balance_sheet, income_statement).T
+    print(resultDf)
+    resultDf.loc['BooktoMarketReturnOnEquity'] = Calculations.bookToReturnOnEquity(resultDf)
+    print(resultDf)
+    resultDf.loc['BtM Return On Equity 3yr'] = resultDf.loc['BooktoMarketReturnOnEquity'].rolling(window = 3, min_periods = 1).mean()
+    resultDf.loc['BtM Return On Equity 5yr'] = resultDf.loc['BooktoMarketReturnOnEquity'].rolling(window = 5, min_periods = 1).mean()
+    tbm_series = Calculations.tangibleBookToMarket(marketValuesDf, resultDf)
+    tbm_series.index = resultDf.columns
+    resultDf.loc['Tangible Book To Market'] = tbm_series
+    tbmroe_series = Calculations.tangibleBookToReturnOnEquity(resultDf)
+    tbmroe_series.index = resultDf.columns
+    resultDf.loc['TangibleBooktoMarketReturnOnEquity'] = tbmroe_series
+    print(resultDf)
+    resultDf.loc['Tangible BtM Return on Equity 3yr'] = resultDf.loc['TangibleBooktoMarketReturnOnEquity'].rolling(window = 3, min_periods = 1).mean()
+    resultDf.loc['Tangible BtM Return on Equity 5yr'] = resultDf.loc['TangibleBooktoMarketReturnOnEquity'].rolling(window = 5, min_periods = 1).mean()
+    divPerShare_series = Calculations.dividendsPerShare(cashflow_statement, balance_sheet)
+    divPerShare_series.index = resultDf.columns
+    resultDf.loc['Dividend Paid Per Share'] = divPerShare_series
+    ebitdaPerShare_series = Calculations.ebitdaPerShare(cashflow_statement, balance_sheet, income_statement)
+    ebitdaPerShare_series.index = resultDf.columns
+    resultDf.loc['EBITDA Per Share'] = ebitdaPerShare_series
+    print(resultDf)
     resultDf.loc['EBITDA Average 3yr'] = Calculations.ebitdaPerShareAverage3(resultDf)
     resultDf.loc['EBITDA Average 7yr'] = Calculations.ebitdaPerShareAverage7(resultDf)
-    resultDf.loc['Net Income Per Share'] = Calculations.commonEarningsPerShare(income_statement, balance_sheet).T
+    niPerShare_series = Calculations.commonEarningsPerShare(income_statement, balance_sheet)
+    niPerShare_series.index = resultDf.columns
+    resultDf.loc['Net Income Per Share'] = niPerShare_series
     resultDf.loc['Net Income Per Share Average 3'] = Calculations.commonEarningsPerShareAverage3(resultDf)
     resultDf.loc["Net Income Per Share Average 7"] = Calculations.commonEarningsPerShareAverage7(resultDf)
-    resultDf.loc['Simple Free Cashflow Per Share'] = Calculations.simpleFreeCashFlowPerShare(income_statement, cashflow_statement, balance_sheet).T
+    sfcPerShare_series = Calculations.simpleFreeCashFlowPerShare(income_statement, cashflow_statement, balance_sheet)
+    sfcPerShare_series.index = resultDf.columns
+    resultDf.loc['Simple Free Cashflow Per Share'] = sfcPerShare_series
     resultDf.loc['Simple Free Cashflow Per Share Average 3'] = Calculations.simpleFreeCashFlowPerShareAverage3(resultDf)
     resultDf.loc['Simple Free Cashflow Per Share Average 7'] = Calculations.simpleFreeCashFlowPerShareAverage7(resultDf)
-    resultDf.loc['Net Cashflow Per Share'] = Calculations.netCashFlowPerShare(cashflow_statement, balance_sheet).T
+    ncfPerShare_series = Calculations.netCashFlowPerShare(cashflow_statement, balance_sheet)
+    ncfPerShare_series.index = resultDf.columns
+    resultDf.loc['Net Cashflow Per Share'] = ncfPerShare_series
     resultDf.loc['Net Cashflow Per Share Average 3'] = Calculations.netCashFlowPerShareAverage3(resultDf)
     resultDf.loc['Net Cashflow Per Share Average 7'] = Calculations.netCashFlowPerShareAverage7(resultDf)
-    resultDf.loc['Net Profit Margin'] = Calculations.netProfitMargin(income_statement).T
+    npm_series = Calculations.netProfitMargin(income_statement)
+    npm_series.index = resultDf.columns
+    resultDf.loc['Net Profit Margin'] = npm_series
     
 
 
@@ -239,6 +376,7 @@ def createSheet(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cas
 class Calculations:
     def shares(balance_sheet: pd.DataFrame):
         outstandingshares = balance_sheet['commonStockSharesOutstanding']
+        print(outstandingshares)
         return outstandingshares
     def revenueTotal(income_statement: pd.DataFrame):
         income = income_statement['totalRevenue']
@@ -248,18 +386,43 @@ class Calculations:
         return revenueAverage
     #turnover defined not using averages for now need to double check how it's supposed to be calculated
     def turnover(income_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
+        income_statement = income_statement.reset_index(drop=True)
+        balance_sheet = balance_sheet.reset_index(drop=True)
         turnover = income_statement['totalRevenue'] / balance_sheet['totalAssets']
         return turnover
     def turnoverAverage3(df: pd.DataFrame):
         turnoverAvg = df.loc['Turnover'].rolling(window = 3, min_periods=1).mean()
         return turnoverAvg
     def grossIncDivTurnover(income_statement: pd.DataFrame, df: pd.DataFrame):
-        grossIncDivTurn = np.where(df['turnover'] > 1, 
-                   income_statement['grossProfit'] / df['turnover'], 
-                   income_statement['grossProfit'] * df['turnover'])
+        # Assuming 'grossProfit' is from 'income_statement' and matches the years in 'df'
+        gross_profit = income_statement['grossProfit']
+        
+        # Align the index of 'gross_profit' to match the columns of 'df'
+        gross_profit = gross_profit.reindex(df.columns)
+
+        grossIncDivTurn = np.where(df.loc['Turnover'] > 1, 
+                   gross_profit / df.loc['Turnover'], 
+                   gross_profit * df.loc['Turnover'])
+        
+        grossIncDivTurn = pd.Series(grossIncDivTurn, index=df.columns)
+
+
         return grossIncDivTurn
     def cfEbitDivTurnover(income_statement: pd.DataFrame, cashflow_statement: pd.DataFrame, df: pd.DataFrame):
-        return (cashflow_statement['operatingCashflow'] + income_statement['incomeTaxExpense'] + income_statement['interestExpense'] + cashflow_statement['depreciationDepletionAndAmortization']) / df['Turnover']
+        operating_cash_flow = cashflow_statement['operatingCashflow']
+        operating_cash_flow = operating_cash_flow.reindex(df.columns)
+        incomeTaxExpense = income_statement['incomeTaxExpense']
+        incomeTaxExpense = incomeTaxExpense.reindex(df.columns)
+        interestExpense = income_statement['interestExpense']
+        interestExpense = interestExpense.reindex(df.columns)
+
+        depreciationExpense = cashflow_statement['depreciationDepletionAndAmortization']
+        depreciationExpense = depreciationExpense.reindex(df.columns)
+    
+        income_statement = income_statement.reset_index(drop=True)
+        cashflow_statement = cashflow_statement.reset_index(drop=True)
+        res = (operating_cash_flow + incomeTaxExpense + interestExpense + depreciationExpense) / df.loc['Turnover']
+        return res
     def roic(income_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
         #nopat
         #nopat = income_statement['operatingIncome'] * (1 - (income_statement['incomeTaxExpense'] / income_statement['incomeBeforeTax']))
@@ -267,19 +430,22 @@ class Calculations:
         #roic = nopat / invested capital (ic)
         return (income_statement['operatingIncome'] * (1 - (income_statement['incomeTaxExpense'] / income_statement['incomeBeforeTax']))) / (balance_sheet['totalCurrentAssets'] - balance_sheet['totalCurrentLiabilities'] - balance_sheet['cashAndCashEquivalentsAtCarryingValue'] + balance_sheet['propertyPlantEquipment'])
     def roicAverage3(df: pd.DataFrame):
-        roicAvg3 = df['roic'].rolling(window = 3, min_periods = 1).mean()
+        roicAvg3 = df.loc['Return On Investment Capital'].rolling(window = 3, min_periods = 1).mean()
         return roicAvg3
     def revsPerShare(income_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
         revsPShare = income_statement['totalRevenue'] / balance_sheet['commonStockSharesOutstanding']
         return revsPShare
     def assets(balance_sheet: pd.DataFrame):
         return balance_sheet['totalAssets']
-    def assetsPerShare(balance_sheet: pd.DataFrame):
-        return balance_sheet['totalAssets'] / balance_sheet['commonStockSharesOutstanding']
+    def assetsPerShare(df: pd.DataFrame):
+        return df.loc['Total Assets'] / df.loc['OutstandingShares']
     def excessCash(balance_sheet: pd.DataFrame):
         return balance_sheet['cashAndCashEquivalentsAtCarryingValue'] + balance_sheet['longTermInvestments'] - balance_sheet['totalCurrentLiabilities']
     def netCommonOverhang(balance_sheet: pd.DataFrame, df: pd.DataFrame):
-        return balance_sheet['totalNonCurrentLiabilities'] + balance_sheet['shortTermDebt'] - balance_sheet['shortTermInvestments'] - df['netExcessCash']
+        balance_sheet = balance_sheet.reset_index(drop = True)
+        z = df.loc['Excess Cash']
+        z = z.reset_index(drop = True)
+        return balance_sheet['totalNonCurrentLiabilities'] + balance_sheet['shortTermDebt'] - balance_sheet['shortTermInvestments'] - z
     def bookValuePerShare(balance_sheet: pd.DataFrame):
         return (balance_sheet['totalAssets'] - balance_sheet['totalLiabilities']) / balance_sheet['commonStockSharesOutstanding']
     def tangibleBookValuePerShare(balance_sheet: pd.DataFrame):
@@ -288,49 +454,63 @@ class Calculations:
     def financialLeverage(balance_sheet: pd.DataFrame):
         return balance_sheet['totalAssets'] / balance_sheet['totalShareholderEquity']
     def returnOnEquity(income_statement: pd.DataFrame, df: pd.DataFrame):
-        return income_statement['netIncome'] * df['turnover'] * df['finLeverage']
+        x = df.loc['Turnover']
+        y = df.loc['Financial Leverage']
+        z = income_statement['netIncome']
+        x = x.reset_index(drop = True)
+        y = y.reset_index(drop = True)
+        z = z.reset_index(drop = True)
+        return z * x * y
     def bookToMarket(marketValues: pd.DataFrame, resultFrame: pd.DataFrame):
-        return resultFrame['Book Value'] / marketValues['marketVal']
+        return resultFrame.loc['Book Value'] / marketValues['marketVal']
     def tangibleBookToMarket(marketValues: pd.DataFrame, resultFrame: pd.DataFrame):
-        return resultFrame['Tangible Book Value'] / marketValues['marketVal']
+        x = resultFrame.loc['Tangible Book Value']
+        y = marketValues['marketVal']
+        x = x.reset_index(drop = True)
+        y = y.reset_index(drop = True)
+        return x / y
     def bookToReturnOnEquity(resultFrame: pd.DataFrame):
-        return resultFrame['Book To Market'] * resultFrame['Return On Equity']
+        return resultFrame.loc['Book To Market'] * resultFrame.loc['Return On Equity']
     def tangibleBookToReturnOnEquity(resultFrame: pd.DataFrame):
-        return resultFrame['Tangible Book To Market'] * resultFrame['Return On Equity']
+        return resultFrame.loc['Tangible Book To Market'] * resultFrame.loc['Return On Equity']
     #Need to implement querying data from sql or yf (if not in sql) to get historic market value of stock for different reporting periods
     def dividendsPerShare(cashflow_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
         return cashflow_statement['dividendPayout'] / balance_sheet['commonStockSharesOutstanding']
     def ebitdaPerShare(cashflow_statement: pd.DataFrame, balance_sheet: pd.DataFrame, income_statement: pd.DataFrame):
         return (income_statement['netIncome'] + income_statement['incomeTaxExpense'] + income_statement['interestExpense'] + income_statement['depreciationAndAmortization']) / balance_sheet['commonStockSharesOutstanding']
     def ebitdaPerShareAverage3(df: pd.DataFrame):
-        return df['ebitdaPerShare'].rolling(window = 3, min_periods= 1).mean()
+        return df.loc['EBITDA Per Share'].rolling(window = 3, min_periods= 1).mean()
     def ebitdaPerShareAverage7(df: pd.DataFrame):
-        return df['ebitdaPerShare'].rolling(window = 7, min_periods = 1).mean()
+        return df.loc['EBITDA Per Share'].rolling(window = 7, min_periods = 1).mean()
     #Should be subtrating minority interest from netIncomeFromCont..., haven't implemented it
     def commonEarningsPerShare(income_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
         return income_statement['netIncomeFromContinuingOperations'] / balance_sheet['commonStockSharesOutstanding']
     def commonEarningsPerShareAverage3(df: pd.DataFrame):
-        return df['commonEarningsPerShare'].rolling(window = 3, min_periods = 1).mean()
+        return df.loc['Net Income Per Share'].rolling(window = 3, min_periods = 1).mean()
     def commonEarningsPerShareAverage7(df: pd.DataFrame):
-        return df['commonEarningsPerShare'].rolling(window = 7, min_periods = 1).mean()
+        return df.loc['Net Income Per Share'].rolling(window = 7, min_periods = 1).mean()
     def simpleFreeCashFlowPerShare(income_statement: pd.DataFrame, cashflow_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
         return (cashflow_statement['netIncome'] + income_statement['depreciationAndAmortization'] - cashflow_statement['capitalExpenditures']) / balance_sheet['commonStockSharesOutstanding']
     def simpleFreeCashFlowPerShareAverage3(df: pd.DataFrame):
-        return df['simpleFreeCashFlow'].rolling(window = 3, min_periods = 1).mean()
+        return df.loc['Simple Free Cashflow Per Share'].rolling(window = 3, min_periods = 1).mean()
     def simpleFreeCashFlowPerShareAverage7(df: pd.DataFrame):
-        return df['simpleFreeCashFlow'].rolling(window = 7, min_periods = 1).mean()
+        return df.loc['Simple Free Cashflow Per Share'].rolling(window = 7, min_periods = 1).mean()
     def netCashFlowPerShare(cashflow_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
         return cashflow_statement['operatingCashflow'] / balance_sheet['commonStockSharesOutstanding']
     def netCashFlowPerShareAverage3(df: pd.DataFrame):
-        return df['netCashFlowPerShare'].rolling(window = 3, min_periods = 1).mean()
+        return df.loc['Net Cashflow Per Share'].rolling(window = 3, min_periods = 1).mean()
     def netCashFlowPerShareAverage7(df: pd.DataFrame):
-        return df['netCashFlowPerShare'].rolling(window = 7, min_periods = 1).mean()
+        return df.loc['Net Cashflow Per Share'].rolling(window = 7, min_periods = 1).mean()
     def netProfitMargin(income_statement: pd.DataFrame):
         return income_statement['netIncome'] / income_statement['totalRevenue']
     def bookValue(balance_sheet: pd.DataFrame):
         return (balance_sheet['totalAssets'] - balance_sheet['totalLiabilities'])
     def tangibleBookValue(balance_sheet: pd.DataFrame, df: pd.DataFrame):
-        return df['Book Value'] - balance_sheet['intangibleAssets']
+        x = df.loc['Book Value']
+        y = balance_sheet['intangibleAssets']
+        x = x.reset_index(drop = True)
+        y = y.reset_index(drop = True)
+        return x - y
     def marketValueForSpecificFilingDate(balance_sheet: pd.DataFrame, ticker: str, filing_date: str):
         balance_sheet = balance_sheet.copy()
         balance_sheet.set_index("fiscalDateEnding", inplace = True)
@@ -349,7 +529,7 @@ class Calculations:
     def marketValueForAllDates(balance_sheet: pd.DataFrame, ticker: str) -> pd.DataFrame:
         market_values = pd.DataFrame(columns=['marketVal'])
 
-        for filing_date in balance_sheet.loc[:, 'fiscalDateEnding']:
+        for filing_date in balance_sheet['fiscalDateEnding']:
             #Calculate market value for each filing date
             market_val = Calculations.marketValueForSpecificFilingDate(balance_sheet, ticker, filing_date)
 
@@ -361,10 +541,9 @@ class Calculations:
 
     #need to implement book to market and tangible book to market, but that requires implementing getting a rough est of the market price of the
     #stock at the time
-b, c, v = getStatements("RIO")
-print(b)
-x = Calculations.marketValueForAllDates(b, "RIO")
-print(type(x))
+b, c, v = getStatements("IBM")
+createSheet(b, c, v, "IBM")
+#print(type(x))
 #createSheet(b, c, v)
 #Syntax for getting the last fin statement where b is the type of fin statement
 #print(b.iloc[-1])
