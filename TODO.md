@@ -1,4 +1,4 @@
-## Implement generating the 'spreadsheet' of Roaring Kitty's analysis and saving to sql now that calculations are implemented
+## Verify implementation of Roaring Kitty spreadsheet
 
 ## Need to expand on the performance calculations. Currently limited to a few basic calcs
 
