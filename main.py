@@ -4,6 +4,7 @@ import pstats
 import results as results
 import sql as sql
 import json
+import indicators.fundamental as fundamental
 
 logger = logging.getLogger()
 logger.setLevel(logging.CRITICAL) #Debug or Critical are used
@@ -34,7 +35,7 @@ d1 = config['variables']['dateFROM'] #From:
 d2 = config['variables']['dateTO'] #TO: #Must be either same year as FROM OR a few days into new year or else SQL dataExists() WILL fail
 
 #stocks = ["BA", "CHPT", "DIS", "MARA", "NIO", "PFE", "SEDG", "SHOP", "SNOW", "XOM"] #ALPHABETICAL #stocks = ["RIO", "SPY", "NVDA"]
-stocks = ["QQQ", "SPY", "RIO"]
+stocks = ["IBM"]
 if(testPerf):
     cProfile.run("results.processDataMultiple(stocks, d1, d2, lookback, view, strat = strat, plotMe = config['variables']['plotMe'])", 'profile_stats')
     p = pstats.Stats('profile_stats')
@@ -51,5 +52,7 @@ tableName = f"strat_{strat}_view_{view}_lookback_{lookback}_from_{d1}_to_{d2}_st
 sql.getTables(db="stock_data.db")
 
 bh, strat = results.average(tableName)
+b, c, v = fundamental.getStatements("IBM")
+fundamental.createSheet(b, c, v, "IBM")
 print(f"B&Hold Average Profit Factor: {bh[0]} Average PnL: {bh[1]}")
 print(f"Strat Average Profit Factor: {strat[0]} Average PnL: {strat[1]}")

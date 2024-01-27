@@ -237,15 +237,8 @@ def createSheet(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cas
     labelList = income_statement['fiscalDateEnding'].tolist()
 
     resultDf.loc['PeriodEnd'] = labelList
-    print('RESULT DF')
-    print(resultDf)
     shares_series = Calculations.shares(balance_sheet)
-    print(shares_series)
-    print('RESULT DF COLUMNS')
-    print(resultDf.columns)
     shares_series.index = resultDf.columns  # Aligning the Series index with DataFrame columns
-    print('RESULT DF AFTER SHARES')
-    print(resultDf)
     resultDf.loc['OutstandingShares'] = shares_series
     #resultDf.loc['OutstandingShares'] = Calculations.shares(balance_sheet)
     result_series = Calculations.revenueTotal(income_statement)
@@ -253,9 +246,6 @@ def createSheet(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cas
     resultDf.loc['Revenues'] = result_series
     #resultDf.loc['Revenues'] = Calculations.revenueTotal(income_statement).T
     resultDf.loc['RevenueAverage3'] = Calculations.revenueTotalAverage3(income_statement).T
-    print('COLUMNS COLUMNS COLUMNS')
-    print(income_statement['totalRevenue'])
-    print(balance_sheet['totalAssets'])
     turnover_series = Calculations.turnover(income_statement, balance_sheet)
     turnover_series.index = resultDf.columns
     resultDf.loc['Turnover'] = turnover_series
@@ -263,16 +253,11 @@ def createSheet(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cas
     resultDf.loc['TurnoverAverage3'] = Calculations.turnoverAverage3(resultDf)
     grincturn_series = Calculations.grossIncDivTurnover(income_statement, resultDf)
     grincturn_series.index = resultDf.columns
-    print(grincturn_series)
     resultDf.loc['Gross Income / Turnover'] = grincturn_series
-    print(resultDf)
     fin_series = Calculations.financialLeverage(balance_sheet)
     fin_series.index = resultDf.columns
-    print(fin_series)
     resultDf.loc['Financial Leverage'] = fin_series
-    print(resultDf)
     cf_series = Calculations.cfEbitDivTurnover(income_statement, cashflow_statement, resultDf)
-    print(cf_series)
     cf_series.index = resultDf.columns
     resultDf.loc['Cashflow EBITDA / Turnover'] = cf_series
     roic_series = Calculations.roic(income_statement, balance_sheet)
@@ -285,21 +270,18 @@ def createSheet(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cas
     assets_series = Calculations.assets(balance_sheet)
     assets_series.index = resultDf.columns
     resultDf.loc['Total Assets'] = assets_series
-    print(resultDf)
     assetsPshare_series = Calculations.assetsPerShare(resultDf)
     assetsPshare_series.index = resultDf.columns
     resultDf.loc['Assets Per Shares'] = assetsPshare_series
     excessCash_series = Calculations.excessCash(balance_sheet)
     excessCash_series.index = resultDf.columns
     resultDf.loc['Excess Cash'] = excessCash_series
-    print(resultDf)
     neo_series = Calculations.netCommonOverhang(balance_sheet, resultDf)
     neo_series.index = resultDf.columns
     resultDf.loc['Net Common Overhang'] = neo_series
     bvps_series = Calculations.bookValuePerShare(balance_sheet)
     bvps_series.index = resultDf.columns
     resultDf.loc['Book Value Per Share'] = bvps_series
-    print(resultDf)
     tbvps_series = Calculations.tangibleBookValuePerShare(balance_sheet)
     tbvps_series.index = resultDf.columns
     resultDf.loc['Tangible Book Value Per Share'] = tbvps_series
@@ -315,10 +297,7 @@ def createSheet(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cas
     btm_series = Calculations.bookToMarket(marketValuesDf, resultDf)
     btm_series.index = resultDf.columns
     resultDf.loc['Book To Market'] = btm_series #I really need to check if i need to transpose funcs like this its kinda confusing tbh
-    #NEED TO IMPLEMENT BOOK TO MARKET FUNC | should be called here
-    print(resultDf)
     resultDf.loc['BooktoMarketReturnOnEquity'] = Calculations.bookToReturnOnEquity(resultDf)
-    print(resultDf)
     resultDf.loc['BtM Return On Equity 3yr'] = resultDf.loc['BooktoMarketReturnOnEquity'].rolling(window = 3, min_periods = 1).mean()
     resultDf.loc['BtM Return On Equity 5yr'] = resultDf.loc['BooktoMarketReturnOnEquity'].rolling(window = 5, min_periods = 1).mean()
     tbm_series = Calculations.tangibleBookToMarket(marketValuesDf, resultDf)
@@ -327,7 +306,6 @@ def createSheet(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cas
     tbmroe_series = Calculations.tangibleBookToReturnOnEquity(resultDf)
     tbmroe_series.index = resultDf.columns
     resultDf.loc['TangibleBooktoMarketReturnOnEquity'] = tbmroe_series
-    print(resultDf)
     resultDf.loc['Tangible BtM Return on Equity 3yr'] = resultDf.loc['TangibleBooktoMarketReturnOnEquity'].rolling(window = 3, min_periods = 1).mean()
     resultDf.loc['Tangible BtM Return on Equity 5yr'] = resultDf.loc['TangibleBooktoMarketReturnOnEquity'].rolling(window = 5, min_periods = 1).mean()
     divPerShare_series = Calculations.dividendsPerShare(cashflow_statement, balance_sheet)
@@ -336,7 +314,6 @@ def createSheet(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cas
     ebitdaPerShare_series = Calculations.ebitdaPerShare(cashflow_statement, balance_sheet, income_statement)
     ebitdaPerShare_series.index = resultDf.columns
     resultDf.loc['EBITDA Per Share'] = ebitdaPerShare_series
-    print(resultDf)
     resultDf.loc['EBITDA Average 3yr'] = Calculations.ebitdaPerShareAverage3(resultDf)
     resultDf.loc['EBITDA Average 7yr'] = Calculations.ebitdaPerShareAverage7(resultDf)
     niPerShare_series = Calculations.commonEarningsPerShare(income_statement, balance_sheet)
@@ -357,26 +334,11 @@ def createSheet(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cas
     npm_series = Calculations.netProfitMargin(income_statement)
     npm_series.index = resultDf.columns
     resultDf.loc['Net Profit Margin'] = npm_series
-
-    
-    
-
-
     print(resultDf)
-    print(resultDf.describe())
-    print(resultDf.shape)
-
-    '''
-    while(placeHolder < balance_sheet.shape[0] - 1):
-        df['Period_End'][balance_sheet.iloc[placeHolder]['fiscalDateEnding']] = balance_sheet.iloc[placeHolder]['fiscalDateEnding']
-
-        df['Outstanding_Shares'][balance_sheet.iloc[placeHolder]['fiscalDateEnding']] = balance_sheet.iloc[placeHolder]['commonStockSharesOutstanding']
-
-        placeHolder += 1
-        return 0
-    '''
+    #print(resultDf.describe())
+    #print(resultDf.shape)
     #Calculations.shares(balance_sheet)
-#print(msft.balance_sheet.iloc[0]) #shares
+
 class Calculations:
     def shares(balance_sheet: pd.DataFrame):
         outstandingshares = balance_sheet['commonStockSharesOutstanding']
@@ -548,8 +510,7 @@ class Calculations:
 
     #need to implement book to market and tangible book to market, but that requires implementing getting a rough est of the market price of the
     #stock at the time
-b, c, v = getStatements("DM")
-createSheet(b, c, v, "DM")
+
 #print(type(x))
 #createSheet(b, c, v)
 #Syntax for getting the last fin statement where b is the type of fin statement
