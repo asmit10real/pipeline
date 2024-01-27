@@ -357,10 +357,14 @@ def createSheet(balance_sheet: pd.DataFrame, income_statement: pd.DataFrame, cas
     npm_series = Calculations.netProfitMargin(income_statement)
     npm_series.index = resultDf.columns
     resultDf.loc['Net Profit Margin'] = npm_series
+
+    
     
 
 
     print(resultDf)
+    print(resultDf.describe())
+    print(resultDf.shape)
 
     '''
     while(placeHolder < balance_sheet.shape[0] - 1):
@@ -396,13 +400,13 @@ class Calculations:
     def grossIncDivTurnover(income_statement: pd.DataFrame, df: pd.DataFrame):
         # Assuming 'grossProfit' is from 'income_statement' and matches the years in 'df'
         gross_profit = income_statement['grossProfit']
-        
-        # Align the index of 'gross_profit' to match the columns of 'df'
-        gross_profit = gross_profit.reindex(df.columns)
+        turnover = df.loc['Turnover']
+        gross_profit = gross_profit.reset_index(drop = True)
+        turnover = turnover.reset_index(drop = True)
 
-        grossIncDivTurn = np.where(df.loc['Turnover'] > 1, 
-                   gross_profit / df.loc['Turnover'], 
-                   gross_profit * df.loc['Turnover'])
+        grossIncDivTurn = np.where(turnover > 1, 
+                   gross_profit / turnover, 
+                   gross_profit * turnover)
         
         grossIncDivTurn = pd.Series(grossIncDivTurn, index=df.columns)
 
@@ -410,18 +414,21 @@ class Calculations:
         return grossIncDivTurn
     def cfEbitDivTurnover(income_statement: pd.DataFrame, cashflow_statement: pd.DataFrame, df: pd.DataFrame):
         operating_cash_flow = cashflow_statement['operatingCashflow']
-        operating_cash_flow = operating_cash_flow.reindex(df.columns)
+        operating_cash_flow = operating_cash_flow.reset_index(drop = True)
         incomeTaxExpense = income_statement['incomeTaxExpense']
-        incomeTaxExpense = incomeTaxExpense.reindex(df.columns)
+        incomeTaxExpense = incomeTaxExpense.reset_index(drop = True)
         interestExpense = income_statement['interestExpense']
-        interestExpense = interestExpense.reindex(df.columns)
+        interestExpense = interestExpense.reset_index(drop = True)
 
         depreciationExpense = cashflow_statement['depreciationDepletionAndAmortization']
-        depreciationExpense = depreciationExpense.reindex(df.columns)
+        depreciationExpense = depreciationExpense.reset_index(drop = True)
+
+        turnover = df.loc['Turnover']
+        turnover = turnover.reset_index(drop = True)
     
         income_statement = income_statement.reset_index(drop=True)
         cashflow_statement = cashflow_statement.reset_index(drop=True)
-        res = (operating_cash_flow + incomeTaxExpense + interestExpense + depreciationExpense) / df.loc['Turnover']
+        res = (operating_cash_flow + incomeTaxExpense + interestExpense + depreciationExpense) / turnover
         return res
     def roic(income_statement: pd.DataFrame, balance_sheet: pd.DataFrame):
         #nopat
@@ -541,8 +548,8 @@ class Calculations:
 
     #need to implement book to market and tangible book to market, but that requires implementing getting a rough est of the market price of the
     #stock at the time
-b, c, v = getStatements("IBM")
-createSheet(b, c, v, "IBM")
+b, c, v = getStatements("DM")
+createSheet(b, c, v, "DM")
 #print(type(x))
 #createSheet(b, c, v)
 #Syntax for getting the last fin statement where b is the type of fin statement
